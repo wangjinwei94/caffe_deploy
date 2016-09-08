@@ -1,14 +1,38 @@
 PROJECT := caffe
 
-CONFIG_FILE := Makefile.config
-# Explicitly check for the config file, otherwise make -k will proceed anyway.
-ifeq ($(wildcard $(CONFIG_FILE)),)
-$(error $(CONFIG_FILE) not found. See $(CONFIG_FILE).example.)
-endif
-include $(CONFIG_FILE)
+# config ------------------------------------------
 
-CXXFLAGS += -std=c++11
-NVCCFLAGS += -std=c++11
+#USE_CUDNN := 1
+CPU_ONLY := 1
+# CUSTOM_CXX := g++
+CUDA_DIR := /usr/local/cuda
+BUILD_DIR := build
+DISTRIBUTE_DIR := distribute
+# DEBUG := 1
+TEST_GPUID := 0
+Q ?= @
+
+# BLAS choice:
+# mkl for MKL
+# open for OpenBlas (default)
+# eigen for eigen (in submodules/eigen)
+BLAS := open
+
+# CUDA architecture setting: going with all of them.
+# For CUDA < 6.0, comment the *_50 lines for compatibility.
+CUDA_ARCH := -gencode arch=compute_20,code=sm_20 \
+		-gencode arch=compute_20,code=sm_21 \
+		-gencode arch=compute_30,code=sm_30 \
+		-gencode arch=compute_35,code=sm_35 \
+		-gencode arch=compute_50,code=sm_50 \
+		-gencode arch=compute_50,code=compute_50
+
+INCLUDE_DIRS := /usr/local/include
+LIBRARY_DIRS := /usr/local/lib /usr/lib
+CXXFLAGS := -std=c++11
+NVCCFLAGS := -std=c++11
+
+# -------------------------------------------------
 
 BUILD_DIR_LINK := $(BUILD_DIR)
 ifeq ($(RELEASE_BUILD_DIR),)
@@ -127,7 +151,7 @@ ifneq ($(CPU_ONLY), 1)
 	LIBRARIES := cudart cublas curand
 endif
 
-LIBRARIES += glog gflags protobuf m
+LIBRARIES += glog protobuf
 WARNINGS := -Wall -Wno-sign-compare
 
 ##############################
@@ -240,42 +264,20 @@ ifeq ($(CPU_ONLY), 1)
 	COMMON_FLAGS += -DCPU_ONLY
 endif
 
-# BLAS configuration (default = ATLAS)
-BLAS ?= atlas
+BLAS ?= open
 ifeq ($(BLAS), mkl)
-	# MKL
 	LIBRARIES += mkl_rt
 	COMMON_FLAGS += -DUSE_MKL
 	MKLROOT ?= /opt/intel/mkl
 	BLAS_INCLUDE ?= $(MKLROOT)/include
 	BLAS_LIB ?= $(MKLROOT)/lib $(MKLROOT)/lib/intel64
 else ifeq ($(BLAS), open)
-	# OpenBLAS
 	LIBRARIES += openblas
+else ifeq ($(BLAS), eigen)
+	COMMON_FLAGS += -DUSE_EIGEN
+	BLAS_INCLUDE := submodules/eigen
 else
-	# ATLAS
-	ifeq ($(LINUX), 1)
-		ifeq ($(BLAS), atlas)
-			# Linux simply has cblas and atlas
-			LIBRARIES += cblas atlas
-		endif
-	else ifeq ($(OSX), 1)
-		# OS X packages atlas as the vecLib framework
-		LIBRARIES += cblas
-		# 10.10 has accelerate while 10.9 has veclib
-		XCODE_CLT_VER := $(shell pkgutil --pkg-info=com.apple.pkg.CLTools_Executables | grep 'version' | sed 's/[^0-9]*\([0-9]\).*/\1/')
-		XCODE_CLT_GEQ_7 := $(shell [ $(XCODE_CLT_VER) -gt 6 ] && echo 1)
-		XCODE_CLT_GEQ_6 := $(shell [ $(XCODE_CLT_VER) -gt 5 ] && echo 1)
-		ifeq ($(XCODE_CLT_GEQ_7), 1)
-			BLAS_INCLUDE ?= /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/Headers
-		else ifeq ($(XCODE_CLT_GEQ_6), 1)
-			BLAS_INCLUDE ?= /System/Library/Frameworks/Accelerate.framework/Versions/Current/Frameworks/vecLib.framework/Headers/
-			LDFLAGS += -framework Accelerate
-		else
-			BLAS_INCLUDE ?= /System/Library/Frameworks/vecLib.framework/Versions/Current/Headers/
-			LDFLAGS += -framework vecLib
-		endif
-	endif
+	$(error unknown BLAS: $(BLAS))
 endif
 INCLUDE_DIRS += $(BLAS_INCLUDE)
 LIBRARY_DIRS += $(BLAS_LIB)

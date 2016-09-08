@@ -1,7 +1,6 @@
 #ifndef CAFFE_COMMON_HPP_
 #define CAFFE_COMMON_HPP_
 
-#include <gflags/gflags.h>
 #include <glog/logging.h>
 
 #include <climits>
@@ -21,15 +20,6 @@
 // Convert macro to string
 #define STRINGIFY(m) #m
 #define AS_STRING(m) STRINGIFY(m)
-
-// gflags 2.1 issue: namespace google was changed to gflags without warning.
-// Luckily we will be able to use GFLAGS_GFLAGS_H_ to detect if it is version
-// 2.1. If yes, we will add a temporary solution to redirect the namespace.
-// TODO(Yangqing): Once gflags solves the problem in a more elegant way, let's
-// remove the following hack.
-#ifndef GFLAGS_GFLAGS_H_
-namespace gflags = google;
-#endif  // GFLAGS_GFLAGS_H_
 
 // Disable the copy and assignment operator for a class.
 #define DISABLE_COPY_AND_ASSIGN(classname) \
@@ -69,9 +59,6 @@ private:\
 // is executed we will see a fatal log.
 #define NOT_IMPLEMENTED LOG(FATAL) << "Not Implemented Yet"
 
-// See PR #1236
-namespace cv { class Mat; }
-
 namespace caffe {
 
 // Common functions and classes from std that caffe often uses.
@@ -89,10 +76,6 @@ using std::set;
 using std::string;
 using std::stringstream;
 using std::vector;
-
-// A global initialization function that you should call in your main function.
-// Currently it initializes google flags and google logging.
-void GlobalInit(int* pargc, char*** pargv);
 
 // A singleton class to hold common caffe stuff, such as the handler that
 // caffe is going to use for cublas, curand, etc.
