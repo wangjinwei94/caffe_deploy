@@ -231,20 +231,6 @@ ifeq ($(USE_CUDNN), 1)
 	COMMON_FLAGS += -DUSE_CUDNN
 endif
 
-# configure IO libraries
-ifeq ($(USE_OPENCV), 1)
-	COMMON_FLAGS += -DUSE_OPENCV
-endif
-ifeq ($(USE_LEVELDB), 1)
-	COMMON_FLAGS += -DUSE_LEVELDB
-endif
-ifeq ($(USE_LMDB), 1)
-	COMMON_FLAGS += -DUSE_LMDB
-ifeq ($(ALLOW_LMDB_NOLOCK), 1)
-	COMMON_FLAGS += -DALLOW_LMDB_NOLOCK
-endif
-endif
-
 # CPU-only configuration
 ifeq ($(CPU_ONLY), 1)
 	OBJS := $(PROTO_OBJS) $(CXX_OBJS)
@@ -305,13 +291,7 @@ CXXFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS)
 NVCCFLAGS += -ccbin=$(CXX) -Xcompiler -fPIC $(COMMON_FLAGS)
 LINKFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS)
 
-USE_PKG_CONFIG ?= 0
-ifeq ($(USE_PKG_CONFIG), 1)
-	PKG_CONFIG := $(shell pkg-config opencv --libs)
-else
-	PKG_CONFIG :=
-endif
-LDFLAGS += $(foreach librarydir,$(LIBRARY_DIRS),-L$(librarydir)) $(PKG_CONFIG) \
+LDFLAGS += $(foreach librarydir,$(LIBRARY_DIRS),-L$(librarydir)) \
 		$(foreach library,$(LIBRARIES),-l$(library))
 
 ##############################
