@@ -2,7 +2,7 @@ PROJECT := caffe
 
 # config ------------------------------------------
 
-#USE_CUDNN := 1
+# USE_CUDNN := 1
 CPU_ONLY := 1
 # CUSTOM_CXX := g++
 CUDA_DIR := /usr/local/cuda
@@ -16,7 +16,7 @@ Q ?= @
 # mkl for MKL
 # open for OpenBlas (default)
 # eigen for eigen (in submodules/eigen)
-BLAS := open
+BLAS := eigen
 
 # CUDA architecture setting: going with all of them.
 # For CUDA < 6.0, comment the *_50 lines for compatibility.
