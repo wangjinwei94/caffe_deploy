@@ -21,7 +21,7 @@ class GradientChecker {
   // kink and kink_range specify an ignored nonsmooth region of the form
   // kink - kink_range <= |feature value| <= kink + kink_range,
   // which accounts for all nonsmoothness in use by caffe
-  GradientChecker(const Dtype stepsize, const Dtype threshold,
+  GradientChecker(const Dtype stepsize = 1e-3, const Dtype threshold = 1e-2,
       const unsigned int seed = 1701, const Dtype kink = 0.,
       const Dtype kink_range = -1)
       : stepsize_(stepsize), threshold_(threshold), seed_(seed),
