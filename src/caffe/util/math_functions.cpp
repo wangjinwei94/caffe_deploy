@@ -287,7 +287,7 @@ void caffe_rng_bernoulli(const int n, const Dtype p, int* r) {
   CHECK_LE(p, 1);
   std::bernoulli_distribution random_distribution(p);
   for (int i = 0; i < n; ++i) {
-    r[i] = random_distribution(*caffe_rng());
+    r[i] = random_distribution(*caffe_rng())?1:0;
   }
 }
 
@@ -305,7 +305,7 @@ void caffe_rng_bernoulli(const int n, const Dtype p, unsigned int* r) {
   CHECK_LE(p, 1);
   std::bernoulli_distribution random_distribution(p);
   for (int i = 0; i < n; ++i) {
-    r[i] = static_cast<unsigned int>(random_distribution(*caffe_rng()));
+    r[i] = random_distribution(*caffe_rng())?1U:0U;
   }
 }
 
