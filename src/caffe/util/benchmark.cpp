@@ -1,4 +1,4 @@
-#include <boost/date_time/posix_time/posix_time.hpp>
+#include <chrono>
 
 #include "caffe/common.hpp"
 #include "caffe/util/benchmark.hpp"
@@ -32,7 +32,7 @@ void Timer::Start() {
       NO_GPU;
 #endif
     } else {
-      start_cpu_ = boost::posix_time::microsec_clock::local_time();
+      start_cpu_ = std::chrono::high_resolution_clock::now();
     }
     running_ = true;
     has_run_at_least_once_ = true;
@@ -49,7 +49,7 @@ void Timer::Stop() {
       NO_GPU;
 #endif
     } else {
-      stop_cpu_ = boost::posix_time::microsec_clock::local_time();
+      stop_cpu_ = std::chrono::high_resolution_clock::now();
     }
     running_ = false;
   }
@@ -74,7 +74,8 @@ float Timer::MicroSeconds() {
       NO_GPU;
 #endif
   } else {
-    elapsed_microseconds_ = (stop_cpu_ - start_cpu_).total_microseconds();
+    elapsed_microseconds_ =
+        std::chrono::duration_cast<std::chrono::microseconds>(this->stop_cpu_ - this->start_cpu_).count();
   }
   return elapsed_microseconds_;
 }
@@ -95,7 +96,8 @@ float Timer::MilliSeconds() {
       NO_GPU;
 #endif
   } else {
-    elapsed_milliseconds_ = (stop_cpu_ - start_cpu_).total_milliseconds();
+    elapsed_milliseconds_ =
+      std::chrono::duration_cast<std::chrono::milliseconds>(this->stop_cpu_ - this->start_cpu_).count();
   }
   return elapsed_milliseconds_;
 }
@@ -126,7 +128,7 @@ CPUTimer::CPUTimer() {
 
 void CPUTimer::Start() {
   if (!running()) {
-    this->start_cpu_ = boost::posix_time::microsec_clock::local_time();
+    this->start_cpu_ = std::chrono::high_resolution_clock::now();
     this->running_ = true;
     this->has_run_at_least_once_ = true;
   }
@@ -134,7 +136,7 @@ void CPUTimer::Start() {
 
 void CPUTimer::Stop() {
   if (running()) {
-    this->stop_cpu_ = boost::posix_time::microsec_clock::local_time();
+    this->stop_cpu_ = std::chrono::high_resolution_clock::now();
     this->running_ = false;
   }
 }
@@ -147,8 +149,8 @@ float CPUTimer::MilliSeconds() {
   if (running()) {
     Stop();
   }
-  this->elapsed_milliseconds_ = (this->stop_cpu_ -
-                                this->start_cpu_).total_milliseconds();
+  this->elapsed_milliseconds_ =
+      std::chrono::duration_cast<std::chrono::milliseconds>(this->stop_cpu_ - this->start_cpu_).count();
   return this->elapsed_milliseconds_;
 }
 
@@ -160,8 +162,8 @@ float CPUTimer::MicroSeconds() {
   if (running()) {
     Stop();
   }
-  this->elapsed_microseconds_ = (this->stop_cpu_ -
-                                this->start_cpu_).total_microseconds();
+  this->elapsed_microseconds_ =
+      std::chrono::duration_cast<std::chrono::microseconds>(this->stop_cpu_ - this->start_cpu_).count();
   return this->elapsed_microseconds_;
 }
 

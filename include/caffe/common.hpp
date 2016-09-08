@@ -1,7 +1,6 @@
 #ifndef CAFFE_COMMON_HPP_
 #define CAFFE_COMMON_HPP_
 
-#include <boost/shared_ptr.hpp>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
@@ -15,6 +14,7 @@
 #include <string>
 #include <utility>  // pair
 #include <vector>
+#include <memory>
 
 #include "caffe/util/device_alternate.hpp"
 
@@ -74,11 +74,8 @@ namespace cv { class Mat; }
 
 namespace caffe {
 
-// We will use the boost shared_ptr instead of the new C++11 one mainly
-// because cuda does not work (at least now) well with C++11 features.
-using boost::shared_ptr;
-
 // Common functions and classes from std that caffe often uses.
+using std::shared_ptr;
 using std::fstream;
 using std::ios;
 using std::isnan;
