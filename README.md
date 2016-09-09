@@ -1,3 +1,23 @@
+# Dependency
+
+protobuf (will be added as a submodule later)
+
+glog (will be replaced by glog_compact soon)
+
+cublas, cudart, curand (if CPU_ONLY is cleared)
+
+cudnn (if CPU_ONLY is cleared and USE_CUDNN is set)
+
+If use BLAS other than eigen, this BLAS will be needed.
+
+# Build
+
+make (all)
+
+make runtest
+
+make distribute
+
 # Caffe
 
 [![Build Status](https://travis-ci.org/BVLC/caffe.svg?branch=master)](https://travis-ci.org/BVLC/caffe)
