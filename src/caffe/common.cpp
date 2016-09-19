@@ -1,11 +1,18 @@
 #include <thread>
-#include <glog/logging.h>
 #include <cmath>
 #include <cstdio>
 #include <ctime>
 
+#ifdef _MSC_VER
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
+
 #include "caffe/common.hpp"
 #include "caffe/util/rng.hpp"
+
+bool GlogDeployLogMessage::enable=false;
 
 namespace caffe {
 

@@ -151,8 +151,8 @@ ifneq ($(CPU_ONLY), 1)
 	LIBRARIES := cudart cublas curand
 endif
 
-LIBRARIES += glog protobuf
-WARNINGS := -Wall -Wno-sign-compare
+LIBRARIES += protobuf
+WARNINGS := -Wall -Wno-sign-compare -Wno-maybe-uninitialized -Wno-return-type -Wno-parentheses
 
 ##############################
 # Set build directories
@@ -250,9 +250,11 @@ else
 endif
 
 # cuDNN acceleration configuration.
-ifeq ($(USE_CUDNN), 1)
-	LIBRARIES += cudnn
-	COMMON_FLAGS += -DUSE_CUDNN
+ifneq ($(CPU_ONLY), 1)
+	ifeq ($(USE_CUDNN), 1)
+		LIBRARIES += cudnn
+		COMMON_FLAGS += -DUSE_CUDNN
+	endif
 endif
 
 # CPU-only configuration

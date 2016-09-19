@@ -2,13 +2,19 @@
 
 protobuf (will be added as a submodule later)
 
-glog (will be replaced by glog_compact soon)
-
 cublas, cudart, curand (if CPU_ONLY is cleared)
 
 cudnn (if CPU_ONLY is cleared and USE_CUDNN is set)
 
 If use BLAS other than eigen, this BLAS will be needed.
+
+# About glog_deploy
+
+Glog_deploy is a header-only wrapper provide LOG/DLOG and CHECK/CHECK_** functions provided by google-glog.
+
+To use glog_deploy, simply include caffe/util/glog_deploy.hpp in your project.
+
+By default, the log is turned off and only fatal log will be output. Change GlogDeployLogMessage::enable to turn it on.
 
 # Build
 

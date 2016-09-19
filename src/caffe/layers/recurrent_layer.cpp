@@ -110,21 +110,23 @@ void RecurrentLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       this->layer_param_.recurrent_param().debug_info());
 
   // Setup pointers to the inputs.
-  x_input_blob_ = CHECK_NOTNULL(unrolled_net_->blob_by_name("x").get());
-  cont_input_blob_ = CHECK_NOTNULL(unrolled_net_->blob_by_name("cont").get());
+  CHECK_NOTNULL(unrolled_net_->blob_by_name("x").get());
+  x_input_blob_ = unrolled_net_->blob_by_name("x").get();
+  CHECK_NOTNULL(unrolled_net_->blob_by_name("cont").get());
+  cont_input_blob_ = unrolled_net_->blob_by_name("cont").get();
   if (static_input_) {
-    x_static_input_blob_ =
-        CHECK_NOTNULL(unrolled_net_->blob_by_name("x_static").get());
+    CHECK_NOTNULL(unrolled_net_->blob_by_name("x_static").get());
+    x_static_input_blob_ = unrolled_net_->blob_by_name("x_static").get();
   }
 
   // Setup pointers to paired recurrent inputs/outputs.
   recur_input_blobs_.resize(num_recur_blobs);
   recur_output_blobs_.resize(num_recur_blobs);
   for (int i = 0; i < recur_input_names.size(); ++i) {
-    recur_input_blobs_[i] =
-        CHECK_NOTNULL(unrolled_net_->blob_by_name(recur_input_names[i]).get());
-    recur_output_blobs_[i] =
-        CHECK_NOTNULL(unrolled_net_->blob_by_name(recur_output_names[i]).get());
+    CHECK_NOTNULL(unrolled_net_->blob_by_name(recur_input_names[i]).get());
+    recur_input_blobs_[i] = unrolled_net_->blob_by_name(recur_input_names[i]).get();
+    CHECK_NOTNULL(unrolled_net_->blob_by_name(recur_output_names[i]).get());
+    recur_output_blobs_[i] = unrolled_net_->blob_by_name(recur_output_names[i]).get();
   }
 
   // Setup pointers to outputs.
@@ -132,8 +134,8 @@ void RecurrentLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       << "OutputBlobNames must provide an output blob name for each top.";
   output_blobs_.resize(output_names.size());
   for (int i = 0; i < output_names.size(); ++i) {
-    output_blobs_[i] =
-        CHECK_NOTNULL(unrolled_net_->blob_by_name(output_names[i]).get());
+    CHECK_NOTNULL(unrolled_net_->blob_by_name(output_names[i]).get());
+    output_blobs_[i] = unrolled_net_->blob_by_name(output_names[i]).get();
   }
 
   // We should have 2 inputs (x and cont), plus a number of recurrent inputs,

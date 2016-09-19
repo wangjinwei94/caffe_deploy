@@ -1,7 +1,7 @@
 #ifndef CAFFE_COMMON_HPP_
 #define CAFFE_COMMON_HPP_
 
-#include <glog/logging.h>
+#include "caffe/util/glog_deploy.hpp"
 
 #include <climits>
 #include <cmath>
