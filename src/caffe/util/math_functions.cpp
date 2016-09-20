@@ -1,6 +1,7 @@
 #include <random>
 #include <cmath>
 #include <limits>
+#include <cstring>
 
 #include "caffe/common.hpp"
 #include "caffe/util/math_functions.hpp"
