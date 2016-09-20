@@ -1,28 +1,24 @@
 # Dependency
 
-protobuf (will be added as a submodule later)
-
 cublas, cudart, curand (if CPU_ONLY is cleared)
 
 cudnn (if CPU_ONLY is cleared and USE_CUDNN is set)
 
-If use BLAS other than eigen, this BLAS will be needed.
+If not use eigen, openblas will be needed.
 
 # About glog_deploy
 
 Glog_deploy is a header-only wrapper provide LOG/DLOG and CHECK/CHECK_** functions provided by google-glog.
 
-To use glog_deploy, simply include caffe/util/glog_deploy.hpp in your project.
+To use glog_deploy, simply include caffe/util/glog_deploy.hpp in your project. If glog/logging.h is included before, glog_deploy will not be used.
 
 By default, the log is turned off and only fatal log will be output. Change GlogDeployLogMessage::enable to turn it on.
 
 # Build
 
-make (all)
+mkdir target; cd target; cmake .. ; make install;
 
-make runtest
-
-make distribute
+Cmake options: CPU_ONLY, USE_CUDNN, USE_EIGEN, DEBUG, BUILD_TEST
 
 # Caffe
 
