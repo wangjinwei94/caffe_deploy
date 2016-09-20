@@ -16,7 +16,7 @@ By default, the log is turned off and only fatal log will be output. Change Glog
 
 # Build
 
-mkdir target; cd target; cmake .. ; make install;
+mkdir target; cd target; cmake .. ; make install; make runtest;
 
 Cmake options: CPU_ONLY, USE_CUDNN, USE_EIGEN, DEBUG, BUILD_TEST
 
