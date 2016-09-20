@@ -109,7 +109,7 @@ endif()
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/install)
 install(TARGETS caffe_deploy DESTINATION lib)
 install(DIRECTORY include/caffe DESTINATION include)
-install(DIRECTORY submodules/protobuf/build/include/google DESTINATION include)
+install(DIRECTORY submodules/protobuf/build_linux_x86_64/include/google DESTINATION include)
 if(NOT CPU_ONLY)
 	# TODO: Jinwei: A ugly implemention to avoid cuda's symbol link of include directory.
 	install(DIRECTORY ${CUDA_TOOLKIT_ROOT_DIR}/targets/x86_64-linux/include DESTINATION .)
