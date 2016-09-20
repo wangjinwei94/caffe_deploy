@@ -25,7 +25,7 @@ namespace caffe {
  * their output Blob%s.
  */
 template <typename Dtype>
-class Layer {
+class _CAFFE_API_ Layer {
  public:
   /**
    * You should not implement your own constructor. Any set up code should go
