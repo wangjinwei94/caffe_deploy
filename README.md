@@ -26,8 +26,6 @@ Cmake options: CPU_ONLY, USE_CUDNN, USE_EIGEN, DEBUG, BUILD_TEST
 
 Test passed: all on Linux x86_64 with CUDA 8.0 and CuDNN 5.1, and CPU_ONLY + USE_EIGEN on Windows.
 
-In GNU environment, the libcaffe_deploy.so will be generated, while in MSVC environment the caffe_deploy.lib and the protobuf.lib will be generated. 
-
 If you have modified caffe.proto, please run update_proto.sh on Linux before build on any platform and configuration.
 
 # Caffe
