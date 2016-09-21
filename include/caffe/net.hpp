@@ -21,7 +21,7 @@ namespace caffe {
  * TODO(dox): more thorough description.
  */
 template <typename Dtype>
-class _CAFFE_API_ Net {
+class Net {
  public:
   explicit Net(const NetParameter& param);
   explicit Net(const string& param_file, Phase phase,

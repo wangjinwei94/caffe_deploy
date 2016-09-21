@@ -79,7 +79,7 @@ using std::vector;
 
 // A singleton class to hold common caffe stuff, such as the handler that
 // caffe is going to use for cublas, curand, etc.
-class _CAFFE_API_ Caffe {
+class Caffe {
  public:
   ~Caffe();
 

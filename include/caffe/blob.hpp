@@ -21,7 +21,7 @@ namespace caffe {
  * TODO(dox): more thorough description.
  */
 template <typename Dtype>
-class _CAFFE_API_ Blob {
+class Blob {
  public:
   Blob()
        : data_(), diff_(), count_(0), capacity_(0) {}
