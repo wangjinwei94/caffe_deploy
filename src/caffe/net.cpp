@@ -882,7 +882,6 @@ INSTANTIATE_CLASS(Net);
 #include "caffe/layers/exp_layer.hpp"
 #include "caffe/layers/filter_layer.hpp"
 #include "caffe/layers/flatten_layer.hpp"
-#include "caffe/layers/hdf5_output_layer.hpp"
 #include "caffe/layers/hinge_loss_layer.hpp"
 #include "caffe/layers/im2col_layer.hpp"
 #include "caffe/layers/infogain_loss_layer.hpp"
