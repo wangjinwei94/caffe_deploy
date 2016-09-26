@@ -7,7 +7,28 @@
 
 #include "caffe/common.hpp"
 #include "caffe/util/device_alternate.hpp"
-#include "caffe/util/mkl_alternate.hpp"
+
+// MKL_ALTERNATE
+#ifdef USE_MKL
+#include <mkl.h>
+#else  // If use MKL, simply include the MKL header
+#ifdef USE_EIGEN
+enum CBLAS_ORDER {
+	CblasRowMajor = 101,
+	CblasColMajor = 102
+};
+enum CBLAS_TRANSPOSE {
+	CblasNoTrans = 111,
+	CblasTrans = 112,
+	CblasConjTrans = 113
+};
+#else
+extern "C" {
+#include <cblas.h>
+}
+#endif  // USE_EIGEN
+#endif  // USE_MKL
+// MKL_ALTERNATE
 
 namespace caffe {
 
