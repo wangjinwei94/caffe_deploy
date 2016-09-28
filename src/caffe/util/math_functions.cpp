@@ -16,7 +16,7 @@
 
 #ifdef USE_EIGEN
 
-#include <Eigen/Dense>
+#include <Eigen/Core>
 
 typedef Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic> DynamicStride;
 
