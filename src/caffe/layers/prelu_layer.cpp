@@ -71,6 +71,7 @@ void PReLULayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   const int count = bottom[0]->count();
   const int dim = bottom[0]->count(2);
   const int channels = bottom[0]->channels();
+  const int num = bottom[0]->num();
   const Dtype* slope_data = this->blobs_[0]->cpu_data();
 
   // For in-place computation
@@ -78,13 +79,21 @@ void PReLULayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     caffe_copy(count, bottom_data, bottom_memory_.mutable_cpu_data());
   }
 
-  // if channel_shared, channel index in the following computation becomes
-  // always zero.
-  const int div_factor = channel_shared_ ? channels : 1;
-  for (int i = 0; i < count; ++i) {
-    int c = (i / dim) % channels / div_factor;
-    top_data[i] = std::max(bottom_data[i], Dtype(0))
-        + slope_data[c] * std::min(bottom_data[i], Dtype(0));
+  if(channel_shared_) {
+    for(int i=0; i<count; i++) {
+      top_data[i]=(bottom_data[i]>Dtype(0))?bottom_data[i]:(slope_data[0]*bottom_data[i]);
+    }
+  }
+  else {
+    int offset=0;
+    for(int i=0; i<num; i++) {
+      for(int j=0; j<channels; j++) {
+        for(int k=0; k<dim; k++) {
+          top_data[offset]=(bottom_data[offset]>Dtype(0))?bottom_data[offset]:(slope_data[j]*bottom_data[offset]);
+          offset++;
+        }
+      }
+    }
   }
 }
 
