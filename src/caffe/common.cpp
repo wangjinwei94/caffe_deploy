@@ -16,8 +16,12 @@ bool GlogDeployLogMessage::enable=false;
 
 namespace caffe {
 
-// Make sure each thread can have different values.
+#if __cplusplus >= 201103L
 thread_local static std::shared_ptr<Caffe> thread_instance_;
+#else
+#warning "Thread local Caffe singleton is not available"
+static std::shared_ptr<Caffe> thread_instance_;
+#endif
 
 Caffe& Caffe::Get() {
   if (!thread_instance_.get()) {
