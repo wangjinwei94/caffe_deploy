@@ -86,7 +86,7 @@ void InnerProductLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   const Dtype* bottom_data = bottom[0]->cpu_data();
   Dtype* top_data = top[0]->mutable_cpu_data();
   const Dtype* weight = this->blobs_[0]->cpu_data();
-  if(bottom[0]->num()==1) {
+  if(M_==1) {
     caffe_cpu_gemv<Dtype>(transpose_ ? CblasTrans : CblasNoTrans, N_, K_, (Dtype)1.,
         weight, bottom_data, (Dtype)0., top_data);
   }
