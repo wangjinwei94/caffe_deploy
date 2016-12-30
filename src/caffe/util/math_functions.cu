@@ -10,6 +10,14 @@
 
 namespace caffe {
 
+template<>
+void caffe_gpu_gemm<int>(const CBLAS_TRANSPOSE TransA,
+    const CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
+    const int alpha, const int* A, const int* B, const int beta,
+    int* C) {
+  NOT_IMPLEMENTED;
+}
+
 template <>
 void caffe_gpu_gemm<float>(const CBLAS_TRANSPOSE TransA,
     const CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
@@ -40,6 +48,13 @@ void caffe_gpu_gemm<double>(const CBLAS_TRANSPOSE TransA,
       (TransB == CblasNoTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
   CUBLAS_CHECK(cublasDgemm(Caffe::cublas_handle(), cuTransB, cuTransA,
       N, M, K, &alpha, B, ldb, A, lda, &beta, C, N));
+}
+
+template <>
+void caffe_gpu_gemv<int>(const CBLAS_TRANSPOSE TransA, const int M,
+    const int N, const int alpha, const int* A, const int* x,
+    const int beta, int* y) {
+  NOT_IMPLEMENTED;
 }
 
 template <>
