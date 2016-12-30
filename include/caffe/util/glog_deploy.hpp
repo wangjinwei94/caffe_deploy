@@ -19,8 +19,8 @@ public:
 		if(enable || level=="FATAL") {
 			std::cerr<<stream.str()<<std::endl;
 		}
-#if defined(__linux__) && defined(__GNUC__)
 		if(level=="FATAL") {
+#if defined(__linux__) && defined(__GNUC__)
 			const int max_trace_num=20;
 			void *buffer[max_trace_num];
 			int trace_num=backtrace(buffer, max_trace_num);
@@ -30,8 +30,11 @@ public:
 				std::cerr<<std::string(trace_string[i])<<std::endl;
 			}
 			free(trace_string);
-		}
+#else
+			std::cerr<<"Call stack trace is not available."
 #endif
+			abort();
+		}
 	}
 	static bool enable;
 	std::stringstream stream;
