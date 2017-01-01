@@ -10,7 +10,6 @@ void CuDNNLCNLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
   LRNLayer<Dtype>::LayerSetUp(bottom, top);
 
-  CUDNN_CHECK(cudnnCreate(&handle_));
   CUDNN_CHECK(cudnnCreateLRNDescriptor(&norm_desc_));
   cudnn::createTensor4dDesc<Dtype>(&bottom_desc_);
   cudnn::createTensor4dDesc<Dtype>(&top_desc_);
@@ -59,9 +58,6 @@ CuDNNLCNLayer<Dtype>::~CuDNNLCNLayer() {
   cudnnDestroyTensorDescriptor(bottom_desc_);
   cudnnDestroyTensorDescriptor(top_desc_);
 
-  // destroy LRN handle
-  cudnnDestroy(handle_);
-
   // free temp buffers
   cudaFree(tempData1);
   cudaFree(tempData2);
@@ -74,7 +70,7 @@ void CuDNNLCNLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
   Dtype* top_data = top[0]->mutable_gpu_data();
 
   CUDNN_CHECK(cudnnDivisiveNormalizationForward(
-        handle_, norm_desc_, CUDNN_DIVNORM_PRECOMPUTED_MEANS,
+        Caffe::cudnn_handle(), norm_desc_, CUDNN_DIVNORM_PRECOMPUTED_MEANS,
         cudnn::dataType<Dtype>::one,
         bottom_desc_, bottom_data,
         NULL,  // srcMeansData
@@ -92,7 +88,7 @@ void CuDNNLCNLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
   Dtype* bottom_diff = bottom[0]->mutable_gpu_diff();
 
   CUDNN_CHECK(cudnnDivisiveNormalizationBackward(
-        handle_, norm_desc_, CUDNN_DIVNORM_PRECOMPUTED_MEANS,
+        Caffe::cudnn_handle(), norm_desc_, CUDNN_DIVNORM_PRECOMPUTED_MEANS,
         cudnn::dataType<Dtype>::one,
         bottom_desc_, bottom_data,
         NULL, top_diff,  // NULL - srcMeansData

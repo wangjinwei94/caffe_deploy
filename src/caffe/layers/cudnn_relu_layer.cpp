@@ -10,7 +10,6 @@ void CuDNNReLULayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   ReLULayer<Dtype>::LayerSetUp(bottom, top);
   // initialize cuDNN
-  CUDNN_CHECK(cudnnCreate(&handle_));
   cudnn::createTensor4dDesc<Dtype>(&bottom_desc_);
   cudnn::createTensor4dDesc<Dtype>(&top_desc_);
   cudnn::createActivationDescriptor<Dtype>(&activ_desc_, CUDNN_ACTIVATION_RELU);
@@ -36,7 +35,6 @@ CuDNNReLULayer<Dtype>::~CuDNNReLULayer() {
 
   cudnnDestroyTensorDescriptor(this->bottom_desc_);
   cudnnDestroyTensorDescriptor(this->top_desc_);
-  cudnnDestroy(this->handle_);
 }
 
 template <typename Dtype>
@@ -50,14 +48,14 @@ void CuDNNReLULayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
   const Dtype* bottom_data = bottom[0]->gpu_data();
   Dtype* top_data = top[0]->mutable_gpu_data();
 #if CUDNN_VERSION_MIN(5, 0, 0)
-  CUDNN_CHECK(cudnnActivationForward(this->handle_,
+  CUDNN_CHECK(cudnnActivationForward(Caffe::cudnn_handle(),
         activ_desc_,
         cudnn::dataType<Dtype>::one,
         this->bottom_desc_, bottom_data,
         cudnn::dataType<Dtype>::zero,
         this->top_desc_, top_data));
 #else
-  CUDNN_CHECK(cudnnActivationForward_v4(this->handle_,
+  CUDNN_CHECK(cudnnActivationForward_v4(Caffe::cudnn_handle(),
         activ_desc_,
         cudnn::dataType<Dtype>::one,
         this->bottom_desc_, bottom_data,
@@ -84,7 +82,7 @@ void CuDNNReLULayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
   const Dtype* bottom_data = bottom[0]->gpu_data();
   Dtype* bottom_diff = bottom[0]->mutable_gpu_diff();
 #if CUDNN_VERSION_MIN(5, 0, 0)
-  CUDNN_CHECK(cudnnActivationBackward(this->handle_,
+  CUDNN_CHECK(cudnnActivationBackward(Caffe::cudnn_handle(),
         activ_desc_,
         cudnn::dataType<Dtype>::one,
         this->top_desc_, top_data, this->top_desc_, top_diff,
@@ -92,7 +90,7 @@ void CuDNNReLULayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
         cudnn::dataType<Dtype>::zero,
         this->bottom_desc_, bottom_diff));
 #else
-  CUDNN_CHECK(cudnnActivationBackward_v4(this->handle_,
+  CUDNN_CHECK(cudnnActivationBackward_v4(Caffe::cudnn_handle(),
         activ_desc_,
         cudnn::dataType<Dtype>::one,
         this->top_desc_, top_data, this->top_desc_, top_diff,

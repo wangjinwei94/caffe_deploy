@@ -53,9 +53,15 @@ int64_t cluster_seedgen(void) {
 #ifdef CPU_ONLY  // CPU-only Caffe.
 
 Caffe::Caffe()
-    : random_generator_(), mode_(Caffe::CPU) {}
+    : cpu_buffer_counter_(0), random_generator_(), mode_(Caffe::CPU) { }
 
-Caffe::~Caffe() { }
+Caffe::~Caffe() {
+  for(size_t i=0; i<cpu_buffer_ptr_.size(); i++) {
+    if(cpu_buffer_ptr_[i]!=NULL) {
+      free(cpu_buffer_ptr_[i]);
+    }
+  }
+}
 
 void Caffe::set_random_seed(const unsigned int seed) {
   // RNG seed
@@ -105,20 +111,23 @@ void* Caffe::RNG::generator() {
 #else  // Normal GPU + CPU Caffe.
 
 Caffe::Caffe()
-    : cublas_handle_(NULL), curand_generator_(NULL), random_generator_(),
-    mode_(Caffe::CPU) {
-  // Try to create a cublas handler, and report an error if failed (but we will
-  // keep the program running as one might just want to run CPU code).
-  if (cublasCreate(&cublas_handle_) != CUBLAS_STATUS_SUCCESS) {
-    LOG(ERROR) << "Cannot create Cublas handle. Cublas won't be available.";
-  }
-  // Try to create a curand handler.
-  if (curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT)
-      != CURAND_STATUS_SUCCESS ||
-      curandSetPseudoRandomGeneratorSeed(curand_generator_, cluster_seedgen())
-      != CURAND_STATUS_SUCCESS) {
-    LOG(ERROR) << "Cannot create Curand generator. Curand won't be available.";
-  }
+    : cublas_handle_(NULL), curand_generator_(NULL), device_set_(false), gpu_buffer_counter_(0),
+#ifdef USE_CUDNN
+    cudnn_handle_(NULL),
+#endif
+    cpu_buffer_counter_(0), random_generator_(), mode_(Caffe::CPU) {
+  // // Try to create a cublas handler, and report an error if failed (but we will
+  // // keep the program running as one might just want to run CPU code).
+  // if (cublasCreate(&cublas_handle_) != CUBLAS_STATUS_SUCCESS) {
+  //   LOG(ERROR) << "Cannot create Cublas handle. Cublas won't be available.";
+  // }
+  // // Try to create a curand handler.
+  // if (curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT)
+  //     != CURAND_STATUS_SUCCESS ||
+  //     curandSetPseudoRandomGeneratorSeed(curand_generator_, cluster_seedgen())
+  //     != CURAND_STATUS_SUCCESS) {
+  //   LOG(ERROR) << "Cannot create Curand generator. Curand won't be available.";
+  // }
 }
 
 Caffe::~Caffe() {
@@ -126,6 +135,22 @@ Caffe::~Caffe() {
   if (curand_generator_) {
     CURAND_CHECK(curandDestroyGenerator(curand_generator_));
   }
+  for(size_t i=0; i<gpu_buffer_ptr_.size(); i++) {
+    if(gpu_buffer_ptr_[i]!=NULL) {
+      // TODO: Jinwei: driver Shutting down
+      // CUDA_CHECK(cudaFree(gpu_buffer_ptr_[i]));
+    }
+  }
+  for(size_t i=0; i<cpu_buffer_ptr_.size(); i++) {
+    if(cpu_buffer_ptr_[i]!=NULL) {
+      free(cpu_buffer_ptr_[i]);
+    }
+  }
+#ifdef USE_CUDNN
+  if(cudnn_handle_) {
+    CUDNN_CHECK(cudnnDestroy(cudnn_handle_));
+  }
+#endif
 }
 
 void Caffe::set_random_seed(const unsigned int seed) {
@@ -147,23 +172,86 @@ void Caffe::set_random_seed(const unsigned int seed) {
 }
 
 void Caffe::SetDevice(const int device_id) {
-  int current_device;
-  CUDA_CHECK(cudaGetDevice(&current_device));
-  if (current_device == device_id) {
-    return;
+  if(!Get().device_set_) {
+    Get().device_set_=true;
+    CUDA_CHECK(cudaSetDevice(device_id));
+    CUBLAS_CHECK(cublasCreate(&Get().cublas_handle_));
+    CURAND_CHECK(curandCreateGenerator(&Get().curand_generator_,
+        CURAND_RNG_PSEUDO_DEFAULT));
+    CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(Get().curand_generator_,
+        cluster_seedgen()));
+#ifdef USE_CUDNN
+    CUDNN_CHECK(cudnnCreate(&Get().cudnn_handle_));
+#endif
   }
-  // The call to cudaSetDevice must come before any calls to Get, which
-  // may perform initialization using the GPU.
-  CUDA_CHECK(cudaSetDevice(device_id));
-  if (Get().cublas_handle_) CUBLAS_CHECK(cublasDestroy(Get().cublas_handle_));
-  if (Get().curand_generator_) {
-    CURAND_CHECK(curandDestroyGenerator(Get().curand_generator_));
+  else {
+    int current_device;
+    CUDA_CHECK(cudaGetDevice(&current_device));
+    if (current_device == device_id) {
+      return;
+    }
+    CUDA_CHECK(cudaSetDevice(device_id));
+    if (Get().cublas_handle_) {
+      CUBLAS_CHECK(cublasDestroy(Get().cublas_handle_));
+    }
+    if (Get().curand_generator_) {
+      CURAND_CHECK(curandDestroyGenerator(Get().curand_generator_));
+    }
+    CUBLAS_CHECK(cublasCreate(&Get().cublas_handle_));
+    CURAND_CHECK(curandCreateGenerator(&Get().curand_generator_,
+        CURAND_RNG_PSEUDO_DEFAULT));
+    CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(Get().curand_generator_,
+        cluster_seedgen()));
+    for(size_t i=0; i<Get().gpu_buffer_ptr_.size(); i++) {
+      if(Get().gpu_buffer_ptr_[i]!=NULL) {
+        CUDA_CHECK(cudaFree(Get().gpu_buffer_ptr_[i]));
+      }
+    }
+    Get().gpu_buffer_ptr_.clear();
+    Get().gpu_buffer_size_.clear();
+#ifdef USE_CUDNN
+    if (Get().cudnn_handle_) {
+      CUDNN_CHECK(cudnnDestroy(Get().cudnn_handle_));
+    }
+    CUDNN_CHECK(cudnnCreate(&Get().cudnn_handle_));
+#endif
   }
-  CUBLAS_CHECK(cublasCreate(&Get().cublas_handle_));
-  CURAND_CHECK(curandCreateGenerator(&Get().curand_generator_,
-      CURAND_RNG_PSEUDO_DEFAULT));
-  CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(Get().curand_generator_,
-      cluster_seedgen()));
+}
+
+void* Caffe::GpuBuffer(size_t size) {
+  int index=Get().gpu_buffer_counter_;
+  CHECK(Get().device_set_);
+  if(Get().gpu_buffer_ptr_.size()<index+1) {
+    Get().gpu_buffer_ptr_.resize(index+1, NULL);
+    Get().gpu_buffer_size_.resize(index+1, 0);
+  }
+  if(size>Get().gpu_buffer_size_[index]) {
+    void* new_ptr;
+    cudaError_t err=cudaMalloc(&new_ptr, size);
+    if(err==cudaSuccess) {
+      if(Get().gpu_buffer_ptr_[index]!=NULL) {
+        CUDA_CHECK(cudaFree(Get().gpu_buffer_ptr_[index]));
+      }
+      Get().gpu_buffer_ptr_[index]=new_ptr;
+      Get().gpu_buffer_size_[index]=size;
+      return Get().gpu_buffer_ptr_[index];
+    }
+    else {
+      return NULL;
+    }
+  }
+  else {
+    return Get().gpu_buffer_ptr_[index];
+  }
+}
+
+void Caffe::KeepGpuBuffer(void) {
+  Get().gpu_buffer_counter_++;
+}
+
+void Caffe::ReleaseGpuBuffer(void) {
+  Get().gpu_buffer_counter_--;
+  CHECK_GE(Get().gpu_buffer_counter_, 0);
 }
 
 void Caffe::DeviceQuery() {
@@ -320,5 +408,39 @@ const char* curandGetErrorString(curandStatus_t error) {
 }
 
 #endif  // CPU_ONLY
+
+void* Caffe::CpuBuffer(size_t size) {
+  int index=Get().cpu_buffer_counter_;
+  if(Get().cpu_buffer_ptr_.size()<index+1) {
+    Get().cpu_buffer_ptr_.resize(index+1, NULL);
+    Get().cpu_buffer_size_.resize(index+1, 0);
+  }
+  if(size>Get().cpu_buffer_size_[index]) {
+    void* new_ptr=malloc(size);
+    if(new_ptr!=NULL) {
+      if(Get().cpu_buffer_ptr_[index]!=NULL) {
+        free(Get().cpu_buffer_ptr_[index]);
+      }
+      Get().cpu_buffer_ptr_[index]=new_ptr;
+      Get().cpu_buffer_size_[index]=size;
+      return Get().cpu_buffer_ptr_[index];
+    }
+    else {
+      return NULL;
+    }
+  }
+  else {
+    return Get().cpu_buffer_ptr_[index];
+  }
+}
+
+void Caffe::KeepCpuBuffer(void) {
+  Get().cpu_buffer_counter_++;
+}
+
+void Caffe::ReleaseCpuBuffer(void) {
+  Get().cpu_buffer_counter_--;
+  CHECK_GE(Get().cpu_buffer_counter_, 0);
+}
 
 }  // namespace caffe

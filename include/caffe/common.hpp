@@ -112,11 +112,24 @@ class Caffe {
     return *(Get().random_generator_);
   }
 #ifndef CPU_ONLY
-  inline static cublasHandle_t cublas_handle() { return Get().cublas_handle_; }
+  inline static cublasHandle_t cublas_handle() {
+    return Get().cublas_handle_;
+  }
   inline static curandGenerator_t curand_generator() {
     return Get().curand_generator_;
   }
+  static void* GpuBuffer(size_t size);
+  static void KeepGpuBuffer(void);
+  static void ReleaseGpuBuffer(void);
+#ifdef USE_CUDNN
+  inline static cudnnHandle_t cudnn_handle() {
+    return Get().cudnn_handle_;
+  }
 #endif
+#endif
+  static void* CpuBuffer(size_t size);
+  static void KeepCpuBuffer(void);
+  static void ReleaseCpuBuffer(void);
 
   // Returns the mode: running on CPU or GPU.
   inline static Brew mode() { return Get().mode_; }
@@ -143,7 +156,17 @@ class Caffe {
 #ifndef CPU_ONLY
   cublasHandle_t cublas_handle_;
   curandGenerator_t curand_generator_;
+  bool device_set_;
+  vector<void*> gpu_buffer_ptr_;
+  vector<size_t> gpu_buffer_size_;
+  int gpu_buffer_counter_;
+#ifdef USE_CUDNN
+  cudnnHandle_t cudnn_handle_;
 #endif
+#endif
+  vector<void*> cpu_buffer_ptr_;
+  vector<size_t> cpu_buffer_size_;
+  int cpu_buffer_counter_;
   shared_ptr<RNG> random_generator_;
 
   Brew mode_;

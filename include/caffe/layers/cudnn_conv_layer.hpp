@@ -44,8 +44,6 @@ class CuDNNConvolutionLayer : public ConvolutionLayer<Dtype> {
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
 
   bool handles_setup_;
-  cudnnHandle_t* handle_;
-  cudaStream_t*  stream_;
 
   // algorithms for forward and backwards convolutions
   cudnnConvolutionFwdAlgo_t *fwd_algo_;
@@ -61,9 +59,6 @@ class CuDNNConvolutionLayer : public ConvolutionLayer<Dtype> {
   size_t *workspace_fwd_sizes_;
   size_t *workspace_bwd_data_sizes_;
   size_t *workspace_bwd_filter_sizes_;
-  size_t workspaceSizeInBytes;  // size of underlying storage
-  void *workspaceData;  // underlying storage
-  void **workspace;  // aliases into workspaceData
 };
 #endif
 

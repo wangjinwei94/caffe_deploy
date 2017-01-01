@@ -9,7 +9,6 @@ template <typename Dtype>
 void CuDNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
   PoolingLayer<Dtype>::LayerSetUp(bottom, top);
-  CUDNN_CHECK(cudnnCreate(&handle_));
   cudnn::createTensor4dDesc<Dtype>(&bottom_desc_);
   cudnn::createTensor4dDesc<Dtype>(&top_desc_);
   cudnn::createPoolingDesc<Dtype>(&pooling_desc_,
@@ -37,7 +36,6 @@ CuDNNPoolingLayer<Dtype>::~CuDNNPoolingLayer() {
   cudnnDestroyTensorDescriptor(bottom_desc_);
   cudnnDestroyTensorDescriptor(top_desc_);
   cudnnDestroyPoolingDescriptor(pooling_desc_);
-  cudnnDestroy(handle_);
 }
 
 template <typename Dtype>
@@ -45,7 +43,7 @@ void CuDNNPoolingLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
   const Dtype* bottom_data = bottom[0]->gpu_data();
   Dtype* top_data = top[0]->mutable_gpu_data();
-  CUDNN_CHECK(cudnnPoolingForward(handle_, pooling_desc_,
+  CUDNN_CHECK(cudnnPoolingForward(Caffe::cudnn_handle(), pooling_desc_,
         cudnn::dataType<Dtype>::one,
         bottom_desc_, bottom_data,
         cudnn::dataType<Dtype>::zero,
@@ -62,7 +60,7 @@ void CuDNNPoolingLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
   const Dtype* top_data = top[0]->gpu_data();
   const Dtype* bottom_data = bottom[0]->gpu_data();
   Dtype* bottom_diff = bottom[0]->mutable_gpu_diff();
-  CUDNN_CHECK(cudnnPoolingBackward(handle_, pooling_desc_,
+  CUDNN_CHECK(cudnnPoolingBackward(Caffe::cudnn_handle(), pooling_desc_,
         cudnn::dataType<Dtype>::one,
         top_desc_, top_data, top_desc_, top_diff,
         bottom_desc_, bottom_data,
