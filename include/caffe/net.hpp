@@ -305,6 +305,15 @@ class Net {
   size_t memory_used_;
   /// Whether to compute and display debug info for the net.
   bool debug_info_;
+
+  /// Memory optimization related stuff.
+  bool share_diff_;
+  bool share_data_;
+  vector<shared_ptr<SyncedMemory>> shared_storage_;
+  std::set<string> excluded_blob_names_;
+  void ShareDiffStorage(void);
+  void ShareDataStorage(void);
+
   DISABLE_COPY_AND_ASSIGN(Net);
 };
 

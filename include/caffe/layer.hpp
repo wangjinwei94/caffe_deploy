@@ -286,6 +286,8 @@ class Layer {
     param_propagate_down_[param_id] = value;
   }
 
+  virtual inline bool IsSharingData(int top_id, int bottom_id) { return false; }
+  virtual inline bool IsSharingDiff(int top_id, int bottom_id) { return false; }
 
  protected:
   /** The protobuf that stores the layer parameters */

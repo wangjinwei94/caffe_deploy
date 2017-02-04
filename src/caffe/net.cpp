@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <unordered_map>
 
 #include "caffe/common.hpp"
 #include "caffe/layer.hpp"
@@ -247,6 +248,41 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
   ShareWeights();
   debug_info_ = param.debug_info();
   LOG(INFO) << "Network initialization done.";
+
+  for(size_t i=0; i<layers_.size(); i++) {
+    for(size_t j=0; j<top_id_vecs_[i].size(); j++) {
+      if(layers_[i]->loss(j)!=Dtype(0)) {
+        excluded_blob_names_.insert(blob_names_[top_id_vecs_[i][j]]);
+      }
+    }
+  }
+  for(int i=0; i<param.mem_param().exclude_blob_size(); i++) {
+    excluded_blob_names_.insert(param.mem_param().exclude_blob(i));
+  }
+
+  share_diff_=param.mem_param().share_diff();
+  if(share_diff_) {
+    if(phase_!=TRAIN || debug_info_) {
+      LOG(INFO) << "Share diff is ignored.";
+      share_diff_=false;
+    }
+    else {
+      LOG(INFO) << "Sharing diff.";
+      ShareDiffStorage();
+    }
+  }
+
+  share_data_=param.mem_param().share_data();
+  if(share_data_) {
+    if(phase_!=TEST || debug_info_) {
+      LOG(INFO) << "Share data is ignored.";
+      share_data_=false;
+    }
+    else {
+      LOG(INFO) << "Sharing data.";
+      ShareDataStorage();
+    }
+  }
 }
 
 template <typename Dtype>
@@ -844,6 +880,209 @@ const shared_ptr<Layer<Dtype> > Net<Dtype>::layer_by_name(
     LOG(WARNING) << "Unknown layer name " << layer_name;
   }
   return layer_ptr;
+}
+
+/**
+ * This class is the core of memory optimization
+ * It simulates a abstract ``slot'' with preemption.
+ * During the dry-run process, a dynamic number of slots are created when deemed necessary (no empty slot is available
+ * when we are acquring one).
+ * By keeping track of which blob used which slot, we can safely make a series of blobs share the underlying storage
+ * without the risk of data corruption.
+ */
+class SlotMeta {
+public:
+  SlotMeta(): key_(), ref_(0) { }
+
+  SlotMeta(const string& key, int ref): key_(key), ref_(ref) { }
+
+  inline const string& key() const { return key_; }
+  inline int ref() const { return ref_; }
+
+  inline void DerefOne(){
+    CHECK_GT(ref_, 0);
+    ref_ -= 1;
+    if (ref_ == 0){
+      key_.clear();
+    }
+  }
+
+  inline void IncRef(){ref_ += 1;}
+
+  void RefSlot(const string& key, int ref) {
+    CHECK(key_.empty());
+    CHECK_NE(key_, key);
+    CHECK_GT(ref, 0);
+    key_ = key;
+    ref_ = ref;
+  }
+
+  inline bool Empty(){
+    return key_.empty();
+  }
+
+  inline bool isSlot(const string& key){return key_ == key;}
+
+private:
+  string key_;
+  int ref_;
+};
+
+size_t AcquireSlot(vector<SlotMeta>& slot_vec, const string& key, int ref) {
+  for(size_t i=0 ; i<slot_vec.size(); i++) {
+    if(slot_vec[i].Empty()) {
+      slot_vec[i].RefSlot(key, ref);
+      return i;
+    }
+  }
+  slot_vec.push_back(SlotMeta(key, ref));
+  return slot_vec.size()-1;
+}
+
+int FindSlot(vector<SlotMeta>& slot_vec, const string& key) {
+  for(int i=0; i<slot_vec.size(); i++) {
+    if(slot_vec[i].isSlot(key)) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+template <typename T, typename Container>
+static inline bool include(const Container& container, const T& val){
+  return container.find(val)!=container.end();
+}
+
+template <typename Dtype>
+void Net<Dtype>::ShareDiffStorage() {
+  std::unordered_map<string, int> slot_index;
+  vector<SlotMeta> slots;
+  for(int i=(layers_.size()-1); i>=0; i--) {
+    const shared_ptr<Layer<Dtype>> layer=layers_[i];
+    const vector<int>& top_id=top_id_vecs_[i];
+    const vector<int>& bottom_id=bottom_id_vecs_[i];
+
+    for(size_t i=0; i<bottom_id.size(); i++) {
+      const string& name=blob_names_[bottom_id[i]];
+      if(include(excluded_blob_names_, name)) {
+        continue;
+      }
+      int idx=FindSlot(slots, name);
+      if(idx==-1) {
+        bool sharing=false;
+        string share_with;
+        for(size_t j=0; j<top_id.size(); j++) {
+          if(layer->IsSharingDiff(j, i)) {
+            sharing=true;
+            share_with=blob_names_[top_id[j]];
+            break;
+          }
+        }
+        if(sharing) {
+          if(include(slot_index, share_with)) {
+            slots[slot_index[share_with]].IncRef();
+            slot_index[name]=slot_index[share_with];
+          }
+        }
+        else {
+          idx=AcquireSlot(slots, name, 1);
+          slot_index[name]=idx;
+        }
+      }
+      else {
+        slots[idx].IncRef();
+      }
+    }
+
+    for(int i=0; i<top_id.size(); i++) {
+      const string& name=blob_names_[top_id[i]];
+      if(include(excluded_blob_names_, name)) {
+        continue;
+      }
+      if(include(slot_index, name)) {
+        slots[slot_index[name]].DerefOne();
+      }
+    }
+  }
+
+  size_t pre_size=shared_storage_.size();
+  shared_storage_.resize(pre_size+slots.size());
+  for(size_t i=pre_size; i<shared_storage_.size(); i++) {
+    shared_storage_[i].reset(new SyncedMemory(1));
+  }
+  for(size_t i=0; i<blobs_.size(); i++) {
+    const string& name=blob_names_[i];
+    if(include(slot_index, name)) {
+      blobs_[i]->SetDiffStorage(shared_storage_[pre_size+slot_index[name]]);
+      LOG(INFO) << "blob: " << i << ", name: " << name << ", diff slot index: " << slot_index[name];
+    }
+  }
+}
+
+template <typename Dtype>
+void Net<Dtype>::ShareDataStorage() {
+  std::unordered_map<string, int> slot_index;
+  vector<SlotMeta> slots;
+  for(int i=0; i<layers_.size(); i++) {
+    const shared_ptr<Layer<Dtype>> layer=layers_[i];
+    const vector<int>& top_id=top_id_vecs_[i];
+    const vector<int>& bottom_id=bottom_id_vecs_[i];
+
+    for(size_t i=0; i<top_id.size(); i++) {
+      const string& name=blob_names_[top_id[i]];
+      if(include(excluded_blob_names_, name)) {
+        continue;
+      }
+      int idx=FindSlot(slots, name);
+      if(idx==-1) {
+        bool sharing=false;
+        string share_with;
+        for(size_t j=0; j<bottom_id.size(); j++) {
+          if(layer->IsSharingData(j, i)) {
+            sharing=true;
+            share_with=blob_names_[bottom_id[j]];
+            break;
+          }
+        }
+        if(sharing) {
+          if(include(slot_index, share_with)) {
+            slots[slot_index[share_with]].IncRef();
+            slot_index[name]=slot_index[share_with];
+          }
+        }
+        else {
+          idx=AcquireSlot(slots, name, 1);
+          slot_index[name]=idx;
+        }
+      }
+      else {
+        slots[idx].IncRef();
+      }
+    }
+
+    for(int i=0; i<bottom_id.size(); i++) {
+      const string& name=blob_names_[bottom_id[i]];
+      if(include(excluded_blob_names_, name)) {
+        continue;
+      }
+      if(include(slot_index, name)) {
+        slots[slot_index[name]].DerefOne();
+      }
+    }
+  }
+
+  size_t pre_size=shared_storage_.size();
+  shared_storage_.resize(pre_size+slots.size());
+  for(size_t i=pre_size; i<shared_storage_.size(); i++) {
+    shared_storage_[i].reset(new SyncedMemory(1));
+  }
+  for(size_t i=0; i<blobs_.size(); i++) {
+    const string& name=blob_names_[i];
+    if(include(slot_index, name)) {
+      blobs_[i]->SetDataStorage(shared_storage_[pre_size+slot_index[name]]);
+      LOG(INFO) << "blob: " << i << ", name: " << name << ", data slot index: " << slot_index[name];
+    }
+  }
 }
 
 INSTANTIATE_CLASS(Net);
