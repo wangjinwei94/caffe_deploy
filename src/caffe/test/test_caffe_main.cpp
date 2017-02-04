@@ -17,20 +17,20 @@ int main(int argc, char** argv) {
   // Before starting testing, let's first print out a few cuda defice info.
   int device;
   cudaGetDeviceCount(&device);
+  if (device == 0) {
+    cout << "Try to running with GPU, but no GPU is available." << endl;
+    return -1;
+  }
   cout << "Cuda number of devices: " << device << endl;
   if (argc > 1) {
-    // Use the given device
     device = atoi(argv[1]);
-    cudaSetDevice(device);
-    cout << "Setting to use device " << device << endl;
   } else if (CUDA_TEST_DEVICE >= 0) {
-    // Use the device assigned in build configuration; but with a lower priority
     device = CUDA_TEST_DEVICE;
   }
-  cudaGetDevice(&device);
-  cout << "Current device id: " << device << endl;
+  cout << "Using device id: " << device << endl;
+  caffe::Caffe::SetDevice(device);
   cudaGetDeviceProperties(&CAFFE_TEST_CUDA_PROP, device);
-  cout << "Current device name: " << CAFFE_TEST_CUDA_PROP.name << endl;
+  cout << "Device name: " << CAFFE_TEST_CUDA_PROP.name << endl;
 #endif
   // invoke the test.
   return RUN_ALL_TESTS();
