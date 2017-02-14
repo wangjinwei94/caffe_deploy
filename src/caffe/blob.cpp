@@ -487,7 +487,8 @@ void Blob<Dtype>::FromProto(const BlobProto& proto, bool reshape) {
     }
     Reshape(shape);
   } else {
-    CHECK(ShapeEquals(proto)) << "shape mismatch (reshape not set)";
+    // TODO: Jinwei: just check count.
+    // CHECK(ShapeEquals(proto)) << "shape mismatch (reshape not set)";
   }
   // copy data
   Dtype* data_vec = mutable_cpu_data();
