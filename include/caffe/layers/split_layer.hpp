@@ -26,6 +26,9 @@ class SplitLayer : public Layer<Dtype> {
   virtual inline const char* type() const { return "Split"; }
   virtual inline int ExactNumBottomBlobs() const { return 1; }
   virtual inline int MinTopBlobs() const { return 1; }
+  virtual inline bool IsSharingData(int top_id, int bottom_id) {
+    return true;
+  }
 
  protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,

@@ -28,6 +28,12 @@ class SliceLayer : public Layer<Dtype> {
   virtual inline const char* type() const { return "Slice"; }
   virtual inline int ExactNumBottomBlobs() const { return 1; }
   virtual inline int MinTopBlobs() const { return 1; }
+  virtual inline bool IsSharingData(int top_id, int bottom_id) {
+    return share_data_diff_;
+  }
+  virtual inline bool IsSharingDiff(int top_id, int bottom_id) {
+    return share_data_diff_;
+  }
 
  protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
@@ -44,6 +50,7 @@ class SliceLayer : public Layer<Dtype> {
   int slice_size_;
   int slice_axis_;
   vector<int> slice_point_;
+  bool share_data_diff_;
 };
 
 }  // namespace caffe

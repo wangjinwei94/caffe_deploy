@@ -1040,7 +1040,7 @@ void Net<Dtype>::ShareDataStorage() {
         bool sharing=false;
         string share_with;
         for(size_t j=0; j<bottom_id.size(); j++) {
-          if(layer->IsSharingData(j, i)) {
+          if(layer->IsSharingData(i, j)) {
             sharing=true;
             share_with=blob_names_[bottom_id[j]];
             break;

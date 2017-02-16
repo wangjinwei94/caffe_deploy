@@ -16,6 +16,9 @@ void SliceLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   std::copy(slice_param.slice_point().begin(),
       slice_param.slice_point().end(),
       std::back_inserter(slice_point_));
+  if(top.size()==1) {
+    share_data_diff_=true;
+  }
 }
 
 template <typename Dtype>
@@ -66,16 +69,14 @@ void SliceLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
     }
   }
   CHECK_EQ(count, bottom[0]->count());
-  if (top.size() == 1) {
-    top[0]->ShareData(*bottom[0]);
-    top[0]->ShareDiff(*bottom[0]);
-  }
 }
 
 template <typename Dtype>
 void SliceLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
-  if (top.size() == 1) { return; }
+  if (top.size() == 1) {
+    top[0]->ShareData(*bottom[0]);
+  }
   int offset_slice_axis = 0;
   const Dtype* bottom_data = bottom[0]->cpu_data();
   const int bottom_slice_axis = bottom[0]->shape(slice_axis_);
@@ -96,7 +97,9 @@ void SliceLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 template <typename Dtype>
 void SliceLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
-  if (!propagate_down[0] || top.size() == 1) { return; }
+  if (top.size() == 1) {
+    bottom[0]->ShareDiff(*top[0]);
+  }
   int offset_slice_axis = 0;
   Dtype* bottom_diff = bottom[0]->mutable_cpu_diff();
   const int bottom_slice_axis = bottom[0]->shape(slice_axis_);

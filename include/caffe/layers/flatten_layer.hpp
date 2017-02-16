@@ -30,11 +30,11 @@ class FlattenLayer : public Layer<Dtype> {
   virtual inline const char* type() const { return "Flatten"; }
   virtual inline int ExactNumBottomBlobs() const { return 1; }
   virtual inline int ExactNumTopBlobs() const { return 1; }
-  virtual inline bool is_sharing_data(int top_id, int bottom_id) {
-    return top_id == bottom_id;
+  virtual inline bool IsSharingData(int top_id, int bottom_id) {
+    return true;
   }
-  virtual inline bool is_sharing_diff(int top_id, int bottom_id) {
-    return top_id == bottom_id;
+  virtual inline bool IsSharingDiff(int top_id, int bottom_id) {
+    return true;
   }
 
  protected:

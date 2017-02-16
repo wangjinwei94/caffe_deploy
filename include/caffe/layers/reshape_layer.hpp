@@ -28,22 +28,30 @@ class ReshapeLayer : public Layer<Dtype> {
   virtual inline const char* type() const { return "Reshape"; }
   virtual inline int ExactNumBottomBlobs() const { return 1; }
   virtual inline int ExactNumTopBlobs() const { return 1; }
-  virtual inline bool is_sharing_data(int top_id, int bottom_id) {
-    return top_id == bottom_id;
+  virtual inline bool IsSharingData(int top_id, int bottom_id) {
+    return true;
   }
-  virtual inline bool is_sharing_diff(int top_id, int bottom_id) {
-    return top_id == bottom_id;
+  virtual inline bool IsSharingDiff(int top_id, int bottom_id) {
+    return true;
   }
 
  protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
-      const vector<Blob<Dtype>*>& top) {}
+      const vector<Blob<Dtype>*>& top) {
+    top[0]->ShareData(*bottom[0]);
+  }
   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
-      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {}
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
+    bottom[0]->ShareDiff(*top[0]);
+  }
   virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
-      const vector<Blob<Dtype>*>& top) {}
+      const vector<Blob<Dtype>*>& top) {
+    top[0]->ShareData(*bottom[0]);
+  }
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
-      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {}
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
+    bottom[0]->ShareDiff(*top[0]);
+  }
 
   /// @brief vector of axes indices whose dimensions we'll copy from the bottom
   vector<int> copy_axes_;

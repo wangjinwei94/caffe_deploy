@@ -4,22 +4,25 @@
 
 namespace caffe {
 
-SyncedMemory::~SyncedMemory() {
+void SyncedMemory::Clear() {
   if (cpu_ptr_ && own_cpu_data_) {
     CaffeFreeHost(cpu_ptr_, cpu_malloc_use_cuda_);
   }
+  cpu_ptr_ = NULL;
+  own_cpu_data_ = false;
 
 #ifndef CPU_ONLY
   if (gpu_ptr_ && own_gpu_data_) {
-    int initial_device;
-    cudaGetDevice(&initial_device);
-    if (gpu_device_ != -1) {
-      CUDA_CHECK(cudaSetDevice(gpu_device_));
-    }
     CUDA_CHECK(cudaFree(gpu_ptr_));
-    cudaSetDevice(initial_device);
+    gpu_ptr_ = NULL;
+    own_gpu_data_ = false;
   }
 #endif  // CPU_ONLY
+  head_ = UNINITIALIZED;
+}
+
+SyncedMemory::~SyncedMemory() {
+    Clear();
 }
 
 inline void SyncedMemory::to_cpu() {
@@ -52,7 +55,6 @@ inline void SyncedMemory::to_gpu() {
 #ifndef CPU_ONLY
   switch (head_) {
   case UNINITIALIZED:
-    CUDA_CHECK(cudaGetDevice(&gpu_device_));
     CUDA_CHECK(cudaMalloc(&gpu_ptr_, size_));
     caffe_gpu_memset(size_, 0, gpu_ptr_);
     head_ = HEAD_AT_GPU;
@@ -60,7 +62,6 @@ inline void SyncedMemory::to_gpu() {
     break;
   case HEAD_AT_CPU:
     if (gpu_ptr_ == NULL) {
-      CUDA_CHECK(cudaGetDevice(&gpu_device_));
       CUDA_CHECK(cudaMalloc(&gpu_ptr_, size_));
       own_gpu_data_ = true;
     }
@@ -105,13 +106,7 @@ void SyncedMemory::set_gpu_data(void* data) {
 #ifndef CPU_ONLY
   CHECK(data);
   if (own_gpu_data_) {
-    int initial_device;
-    cudaGetDevice(&initial_device);
-    if (gpu_device_ != -1) {
-      CUDA_CHECK(cudaSetDevice(gpu_device_));
-    }
     CUDA_CHECK(cudaFree(gpu_ptr_));
-    cudaSetDevice(initial_device);
   }
   gpu_ptr_ = data;
   head_ = HEAD_AT_GPU;
@@ -138,11 +133,17 @@ void* SyncedMemory::mutable_gpu_data() {
 #endif
 }
 
+void SyncedMemory::Resize(size_t new_size) {
+  if(new_size>size_) {
+    size_=new_size;
+    Clear();
+  }
+}
+
 #ifndef CPU_ONLY
 void SyncedMemory::async_gpu_push(const cudaStream_t& stream) {
   CHECK(head_ == HEAD_AT_CPU);
   if (gpu_ptr_ == NULL) {
-    CUDA_CHECK(cudaGetDevice(&gpu_device_));
     CUDA_CHECK(cudaMalloc(&gpu_ptr_, size_));
     own_gpu_data_ = true;
   }

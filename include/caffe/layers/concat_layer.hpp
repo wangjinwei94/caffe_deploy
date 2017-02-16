@@ -26,6 +26,12 @@ class ConcatLayer : public Layer<Dtype> {
   virtual inline const char* type() const { return "Concat"; }
   virtual inline int MinBottomBlobs() const { return 1; }
   virtual inline int ExactNumTopBlobs() const { return 1; }
+  virtual inline bool IsSharingData(int top_id, int bottom_id) {
+    return share_data_diff_;
+  }
+  virtual inline bool IsSharingDiff(int top_id, int bottom_id) {
+    return share_data_diff_;
+  }
 
  protected:
   /**
@@ -80,6 +86,7 @@ class ConcatLayer : public Layer<Dtype> {
   int num_concats_;
   int concat_input_size_;
   int concat_axis_;
+  bool share_data_diff_;
 };
 
 }  // namespace caffe
