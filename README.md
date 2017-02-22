@@ -4,7 +4,7 @@ cublas, cudart, curand (if CPU_ONLY is cleared)
 
 cudnn (if CPU_ONLY is cleared and USE_CUDNN is set)
 
-If not use eigen, openblas will be needed.
+openblas (if USE_EIGEN is cleared)
 
 # About glog_deploy
 
