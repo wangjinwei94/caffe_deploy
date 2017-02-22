@@ -96,6 +96,7 @@ TYPED_TEST(SliceLayerTest, TestTrivialSlice) {
   this->blob_top_vec_0_.resize(1);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_0_);
   ASSERT_EQ(this->blob_bottom_->shape(), this->blob_top_0_->shape());
+  layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_0_);
   for (int i = 0; i < this->blob_bottom_->count(); ++i) {
     EXPECT_EQ(this->blob_bottom_->cpu_data()[i],
               this->blob_top_0_->cpu_data()[i]);
