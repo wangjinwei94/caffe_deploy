@@ -1,3 +1,6 @@
 [submodule "submodules/eigen"]
 	path = submodules/eigen
 	url = https://github.com/wang-jinwei/eigen.git
+[submodule "submodules/protobuf"]
+	path = submodules/protobuf
+	url = https://github.com/wang-jinwei/protobuf.git
