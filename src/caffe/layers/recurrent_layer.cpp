@@ -205,26 +205,16 @@ void RecurrentLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
     recur_input_blobs_[i]->Reshape(recur_input_shapes[i]);
   }
   unrolled_net_->Reshape();
-  x_input_blob_->ShareData(*bottom[0]);
-  x_input_blob_->ShareDiff(*bottom[0]);
-  cont_input_blob_->ShareData(*bottom[1]);
-  if (static_input_) {
-    x_static_input_blob_->ShareData(*bottom[2]);
-    x_static_input_blob_->ShareDiff(*bottom[2]);
-  }
   if (expose_hidden_) {
     const int bottom_offset = 2 + static_input_;
     for (int i = bottom_offset, j = 0; i < bottom.size(); ++i, ++j) {
       CHECK(recur_input_blobs_[j]->shape() == bottom[i]->shape())
           << "bottom[" << i << "] shape must match hidden state input shape: "
           << recur_input_blobs_[j]->shape_string();
-      recur_input_blobs_[j]->ShareData(*bottom[i]);
     }
   }
   for (int i = 0; i < output_blobs_.size(); ++i) {
     top[i]->ReshapeLike(*output_blobs_[i]);
-    top[i]->ShareData(*output_blobs_[i]);
-    top[i]->ShareDiff(*output_blobs_[i]);
   }
   if (expose_hidden_) {
     const int top_offset = output_blobs_.size();
@@ -246,6 +236,20 @@ void RecurrentLayer<Dtype>::Reset() {
 template <typename Dtype>
 void RecurrentLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
+  x_input_blob_->ShareData(*bottom[0]);
+  x_input_blob_->ShareDiff(*bottom[0]);
+  cont_input_blob_->ShareData(*bottom[1]);
+  if (static_input_) {
+    x_static_input_blob_->ShareData(*bottom[2]);
+    x_static_input_blob_->ShareDiff(*bottom[2]);
+  }
+  if (expose_hidden_) {
+    const int bottom_offset = 2 + static_input_;
+    for (int i = bottom_offset, j = 0; i < bottom.size(); ++i, ++j) {
+      recur_input_blobs_[j]->ShareData(*bottom[i]);
+    }
+  }
+
   // Hacky fix for test time: reshare all the internal shared blobs, which may
   // currently point to a stale owner blob that was dropped when Solver::Test
   // called test_net->ShareTrainedLayersWith(net_.get()).
@@ -267,6 +271,11 @@ void RecurrentLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 
   unrolled_net_->ForwardTo(last_layer_index_);
 
+  for (int i = 0; i < output_blobs_.size(); ++i) {
+    top[i]->ReshapeLike(*output_blobs_[i]);
+    top[i]->ShareData(*output_blobs_[i]);
+    top[i]->ShareDiff(*output_blobs_[i]);
+  }
   if (expose_hidden_) {
     const int top_offset = output_blobs_.size();
     for (int i = top_offset, j = 0; i < top.size(); ++i, ++j) {
