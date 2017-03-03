@@ -45,7 +45,6 @@ endif()
 ### sub directory
 
 include_directories(${caffe_deploy_SOURCE_DIR}/include)
-include_directories(${caffe_deploy_SOURCE_DIR}/submodules/protobuf/build_linux_x86_64/include)
 add_subdirectory(${caffe_deploy_SOURCE_DIR}/submodules/protobuf)
 
 ### definitions
@@ -144,7 +143,6 @@ endif()
 ### include
 
 include_directories(${caffe_deploy_SOURCE_DIR}/include)
-include_directories(${caffe_deploy_SOURCE_DIR}/submodules/protobuf/build_linux_x86_64/include)
 if(USE_EIGEN)
 	include_directories(${caffe_deploy_SOURCE_DIR}/submodules/eigen)
 endif()
