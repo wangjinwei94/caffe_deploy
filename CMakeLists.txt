@@ -47,6 +47,20 @@ endif()
 include_directories(${caffe_deploy_SOURCE_DIR}/include)
 add_subdirectory(${caffe_deploy_SOURCE_DIR}/submodules/protobuf)
 
+### protoc
+
+set(PROTO_FILE ${CMAKE_CURRENT_SOURCE_DIR}/src/caffe/proto/caffe.proto)
+set(PROTO_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/caffe/proto/caffe.pb.cc)
+set(PROTO_HEADER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/include/caffe/proto/)
+set(PROTO_HEADER_FILE caffe.pb.h)
+add_custom_command(
+  OUTPUT ${PROTO_SRC} ${PROTO_HEADER_PATH}/${PROTO_HEADER_FILE} DEPENDS protoc ${PROTO_FILE}
+  COMMAND protoc ${PROTO_FILE} --cpp_out=. --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/src
+  COMMAND mv caffe/proto/caffe.pb.cc ${PROTO_SRC}
+  COMMAND mkdir -p ${PROTO_HEADER_PATH}
+  COMMAND mv caffe/proto/caffe.pb.h ${PROTO_HEADER_PATH}/${PROTO_HEADER_FILE}
+)
+
 ### definitions
 
 include(CheckCXXCompilerFlag)
@@ -169,7 +183,7 @@ list(REMOVE_ITEM CUDA_SRCS ${TEST_CUDA_SRCS})
 if(NOT CPU_ONLY)
 	cuda_compile(CUDA_OBJS ${CUDA_SRCS})
 endif()
-add_library(caffe_deploy STATIC ${CPP_SRCS} ${CC_SRCS} ${CUDA_OBJS})
+add_library(caffe_deploy STATIC ${CPP_SRCS} ${CC_SRCS} ${PROTO_SRC} ${CUDA_OBJS})
 target_link_libraries(caffe_deploy protobuf)
 if(NOT MSVC)
 	target_link_libraries(caffe_deploy pthread)
@@ -190,6 +204,12 @@ endif()
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/install)
 install(TARGETS caffe_deploy DESTINATION lib)
 install(DIRECTORY include/caffe DESTINATION include)
+get_target_property(PROTOBUF_INSTALL_INCLUDE_PATH protobuf INSTALL_INCLUDE_PATH)
+get_target_property(PROTOBUF_INSTALL_INCLUDE_PATTERN protobuf INSTALL_INCLUDE_PATTERN)
+get_target_property(PROTOBUF_INSTALL_LIB_PATH protobuf INSTALL_LIB_PATH)
+install(FILES ${PROTOBUF_INSTALL_LIB_PATH} DESTINATION lib)
+install(DIRECTORY ${PROTOBUF_INSTALL_INCLUDE_PATH} DESTINATION include
+		FILES_MATCHING PATTERN ${PROTOBUF_INSTALL_INCLUDE_PATTERN})
 
 ### test
 

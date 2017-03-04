@@ -17,6 +17,8 @@
 
 # Compiled protocol buffers
 *_pb2.py
+*.pb.cc
+*.pb.h
 
 # Compiled python
 *.pyc
