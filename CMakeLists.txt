@@ -221,6 +221,11 @@ if(NOT USE_EIGEN)
   target_link_libraries(caffe_deploy PUBLIC ${BLAS_LIBRARIES})
 endif()
 
+### properties
+
+set_target_properties(caffe_deploy PROPERTIES INSTALL_INCLUDE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set_target_properties(caffe_deploy PROPERTIES INSTALL_INCLUDE_PB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/include/caffe/proto/caffe.pb.h)
+
 ### install
 
 if(TOP_PROJECT)
