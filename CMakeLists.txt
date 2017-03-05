@@ -7,7 +7,6 @@ option(DEBUG "Debug mode." OFF)
 option(CPU_ONLY "CPU only mode." OFF)
 option(USE_CUDNN "Use CuDNN library." ON)
 option(USE_EIGEN "Use submodules/eigen as BLAS." ON)
-option(BUILD_TEST "Build unit-test." OFF)
 
 if(DEBUG)
   message(STATUS "Use debug mode.")
@@ -31,6 +30,12 @@ if(USE_EIGEN)
   message(STATUS "Use submodules/eigen as BLAS.")
 else()
   message(STATUS "Use OpenBlas as BLAS.")
+endif()
+
+if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
+  set(TOP_PROJECT ON)
+else()
+  set(TOP_PROJECT OFF)
 endif()
 
 ### sub directory
@@ -87,7 +92,11 @@ if(NOT CPU_ONLY)
   cuda_include_directories(${CMAKE_CURRENT_SOURCE_DIR}/submodules/protobuf/src)
   cuda_compile(CUDA_OBJS ${CUDA_SRCS})
 endif()
-add_library(caffe_deploy SHARED ${CPP_SRCS} ${CC_SRCS} ${PROTO_SRC} ${CUDA_OBJS})
+if(TOP_PROJECT)
+  add_library(caffe_deploy SHARED ${CPP_SRCS} ${CC_SRCS} ${PROTO_SRC} ${CUDA_OBJS})
+else()
+  add_library(caffe_deploy STATIC ${CPP_SRCS} ${CC_SRCS} ${PROTO_SRC} ${CUDA_OBJS})
+endif()
 
 ### compile options and definations
 
@@ -214,17 +223,19 @@ endif()
 
 ### install
 
-set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/install)
-install(TARGETS caffe_deploy DESTINATION lib)
-install(DIRECTORY include/caffe DESTINATION include)
-get_target_property(PROTOBUF_INSTALL_INCLUDE_PATH protobuf INSTALL_INCLUDE_PATH)
-get_target_property(PROTOBUF_INSTALL_INCLUDE_PATTERN protobuf INSTALL_INCLUDE_PATTERN)
-install(DIRECTORY ${PROTOBUF_INSTALL_INCLUDE_PATH} DESTINATION include
-    FILES_MATCHING PATTERN ${PROTOBUF_INSTALL_INCLUDE_PATTERN})
+if(TOP_PROJECT)
+  set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/install)
+  install(TARGETS caffe_deploy DESTINATION lib)
+  install(DIRECTORY include/caffe DESTINATION include)
+  get_target_property(PROTOBUF_INSTALL_INCLUDE_PATH protobuf INSTALL_INCLUDE_PATH)
+  get_target_property(PROTOBUF_INSTALL_INCLUDE_PATTERN protobuf INSTALL_INCLUDE_PATTERN)
+  install(DIRECTORY ${PROTOBUF_INSTALL_INCLUDE_PATH} DESTINATION include
+      FILES_MATCHING PATTERN ${PROTOBUF_INSTALL_INCLUDE_PATTERN})
+endif()
 
 ### test
 
-if(BUILD_TEST)
+if(TOP_PROJECT)
   if(NOT CPU_ONLY)
     # TODO: Jinwei: ugly code due to CUDA can't use target_include_directories()
     cuda_include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)

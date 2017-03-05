@@ -1090,3 +1090,71 @@ void Net<Dtype>::ShareDataStorage() {
 INSTANTIATE_CLASS(Net);
 
 }  // namespace caffe
+
+#include "caffe/layer_factory.hpp"
+
+namespace caffe {
+
+#define LAYER_REGISTERER(name) \
+	extern LayerRegisterer<float> g_creator_f_##name; \
+	extern LayerRegisterer<double> g_creator_d_##name; \
+	LayerRegisterer<float>* p_g_creator_f_##name = &g_creator_f_##name; \
+	LayerRegisterer<double>* p_g_creator_d_##name = &g_creator_d_##name
+
+LAYER_REGISTERER(LSTM);
+LAYER_REGISTERER(Exp);
+LAYER_REGISTERER(Split);
+LAYER_REGISTERER(BatchNorm);
+LAYER_REGISTERER(Eltwise);
+LAYER_REGISTERER(Filter);
+LAYER_REGISTERER(LSTMUnit);
+LAYER_REGISTERER(EuclideanLoss);
+LAYER_REGISTERER(Flatten);
+LAYER_REGISTERER(Crop);
+LAYER_REGISTERER(AbsVal);
+LAYER_REGISTERER(MultinomialLogisticLoss);
+LAYER_REGISTERER(Im2col);
+LAYER_REGISTERER(Scale);
+LAYER_REGISTERER(RNN);
+LAYER_REGISTERER(SoftmaxWithLoss);
+LAYER_REGISTERER(SPP);
+LAYER_REGISTERER(PReLU);
+LAYER_REGISTERER(Power);
+LAYER_REGISTERER(Reduction);
+LAYER_REGISTERER(Tile);
+LAYER_REGISTERER(Input);
+LAYER_REGISTERER(HingeLoss);
+LAYER_REGISTERER(Reshape);
+LAYER_REGISTERER(BatchReindex);
+LAYER_REGISTERER(DummyData);
+LAYER_REGISTERER(Threshold);
+LAYER_REGISTERER(InnerProduct);
+LAYER_REGISTERER(ArgMax);
+LAYER_REGISTERER(ContrastiveLoss);
+LAYER_REGISTERER(Concat);
+LAYER_REGISTERER(ELU);
+LAYER_REGISTERER(Deconvolution);
+LAYER_REGISTERER(Dropout);
+LAYER_REGISTERER(Silence);
+LAYER_REGISTERER(MVN);
+LAYER_REGISTERER(Embed);
+LAYER_REGISTERER(Bias);
+LAYER_REGISTERER(Accuracy);
+LAYER_REGISTERER(Parameter);
+LAYER_REGISTERER(InfogainLoss);
+LAYER_REGISTERER(Log);
+LAYER_REGISTERER(SigmoidCrossEntropyLoss);
+LAYER_REGISTERER(BNLL);
+LAYER_REGISTERER(Slice);
+LAYER_REGISTERER(Convolution);
+LAYER_REGISTERER(Pooling);
+LAYER_REGISTERER(LRN);
+LAYER_REGISTERER(ReLU);
+LAYER_REGISTERER(Sigmoid);
+LAYER_REGISTERER(Softmax);
+LAYER_REGISTERER(TanH);
+#ifdef WITH_PYTHON_LAYER
+LAYER_REGISTERER(Python);
+#endif
+
+}
