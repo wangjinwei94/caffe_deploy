@@ -1,6 +1,12 @@
 project(caffe_deploy)
 cmake_minimum_required(VERSION 3.0)
 
+if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
+  set(TOP_PROJECT ON)
+else()
+  set(TOP_PROJECT OFF)
+endif()
+
 ### option and message
 
 option(DEBUG "Debug mode." OFF)
@@ -30,12 +36,6 @@ if(USE_EIGEN)
   message(STATUS "Use submodules/eigen as BLAS.")
 else()
   message(STATUS "Use OpenBlas as BLAS.")
-endif()
-
-if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
-  set(TOP_PROJECT ON)
-else()
-  set(TOP_PROJECT OFF)
 endif()
 
 ### sub directory
