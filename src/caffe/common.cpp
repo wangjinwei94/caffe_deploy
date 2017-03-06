@@ -19,7 +19,7 @@ namespace caffe {
 #if __cplusplus >= 201103L
 thread_local static std::shared_ptr<Caffe> thread_instance_;
 #else
-#warning "Thread local Caffe singleton is not available"
+#error "Thread local Caffe singleton is not available"
 static std::shared_ptr<Caffe> thread_instance_;
 #endif
 
