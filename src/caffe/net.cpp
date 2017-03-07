@@ -1097,9 +1097,7 @@ namespace caffe {
 
 #define LAYER_REGISTERER(name) \
 	extern LayerRegisterer<float> g_creator_f_##name; \
-	extern LayerRegisterer<double> g_creator_d_##name; \
 	LayerRegisterer<float>* p_g_creator_f_##name = &g_creator_f_##name; \
-	LayerRegisterer<double>* p_g_creator_d_##name = &g_creator_d_##name
 
 LAYER_REGISTERER(LSTM);
 LAYER_REGISTERER(Exp);

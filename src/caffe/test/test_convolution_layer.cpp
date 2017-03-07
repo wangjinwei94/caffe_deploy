@@ -142,10 +142,6 @@ template void caffe_conv(const Blob<float>* in,
     ConvolutionParameter* conv_param,
     const vector<shared_ptr<Blob<float> > >& weights,
     Blob<float>* out);
-template void caffe_conv(const Blob<double>* in,
-    ConvolutionParameter* conv_param,
-    const vector<shared_ptr<Blob<double> > >& weights,
-    Blob<double>* out);
 
 template <typename TypeParam>
 class ConvolutionLayerTest : public MultiDeviceTest<TypeParam> {
