@@ -45,6 +45,7 @@ public:
 #endif
 			abort();
 		}
+		stream<<std::endl; 
 	}
 	static bool enable;
 	std::ostream& stream;
