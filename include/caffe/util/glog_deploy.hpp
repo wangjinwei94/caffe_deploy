@@ -26,7 +26,7 @@ static GlogDeoloyNullStream glog_deploy_null_stream;
 class GlogDeployLogMessage {
 public:
 	GlogDeployLogMessage(const std::string& level): level(level),
-			stream(enable?std::cerr:glog_deploy_null_stream) {
+			stream((enable || level=="FATAL")?std::cerr:glog_deploy_null_stream) {
 	}
 	~GlogDeployLogMessage() {
 		if(level=="FATAL") {
