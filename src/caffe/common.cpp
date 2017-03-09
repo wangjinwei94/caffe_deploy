@@ -444,3 +444,141 @@ void Caffe::ReleaseCpuBuffer(void) {
 }
 
 }  // namespace caffe
+
+#include "caffe/layer_factory.hpp"
+#include "caffe/layers/absval_layer.hpp"
+#include "caffe/layers/absval_layer.hpp"
+#include "caffe/layers/accuracy_layer.hpp"
+#include "caffe/layers/argmax_layer.hpp"
+#include "caffe/layers/base_conv_layer.hpp"
+#include "caffe/layers/batch_norm_layer.hpp"
+#include "caffe/layers/batch_reindex_layer.hpp"
+#include "caffe/layers/bias_layer.hpp"
+#include "caffe/layers/bnll_layer.hpp"
+#include "caffe/layers/concat_layer.hpp"
+#include "caffe/layers/contrastive_loss_layer.hpp"
+#include "caffe/layers/conv_layer.hpp"
+#include "caffe/layers/crop_layer.hpp"
+#include "caffe/layers/cudnn_conv_layer.hpp"
+#include "caffe/layers/cudnn_lcn_layer.hpp"
+#include "caffe/layers/cudnn_lrn_layer.hpp"
+#include "caffe/layers/cudnn_pooling_layer.hpp"
+#include "caffe/layers/cudnn_relu_layer.hpp"
+#include "caffe/layers/cudnn_sigmoid_layer.hpp"
+#include "caffe/layers/cudnn_softmax_layer.hpp"
+#include "caffe/layers/cudnn_tanh_layer.hpp"
+#include "caffe/layers/deconv_layer.hpp"
+#include "caffe/layers/dropout_layer.hpp"
+#include "caffe/layers/dummy_data_layer.hpp"
+#include "caffe/layers/eltwise_layer.hpp"
+#include "caffe/layers/elu_layer.hpp"
+#include "caffe/layers/embed_layer.hpp"
+#include "caffe/layers/euclidean_loss_layer.hpp"
+#include "caffe/layers/exp_layer.hpp"
+#include "caffe/layers/filter_layer.hpp"
+#include "caffe/layers/flatten_layer.hpp"
+#include "caffe/layers/hinge_loss_layer.hpp"
+#include "caffe/layers/im2col_layer.hpp"
+#include "caffe/layers/infogain_loss_layer.hpp"
+#include "caffe/layers/inner_product_layer.hpp"
+#include "caffe/layers/input_layer.hpp"
+#include "caffe/layers/log_layer.hpp"
+#include "caffe/layers/loss_layer.hpp"
+#include "caffe/layers/lrn_layer.hpp"
+#include "caffe/layers/lstm_layer.hpp"
+#include "caffe/layers/multinomial_logistic_loss_layer.hpp"
+#include "caffe/layers/mvn_layer.hpp"
+#include "caffe/layers/neuron_layer.hpp"
+#include "caffe/layers/parameter_layer.hpp"
+#include "caffe/layers/pooling_layer.hpp"
+#include "caffe/layers/power_layer.hpp"
+#include "caffe/layers/prelu_layer.hpp"
+#include "caffe/layers/recurrent_layer.hpp"
+#include "caffe/layers/reduction_layer.hpp"
+#include "caffe/layers/relu_layer.hpp"
+#include "caffe/layers/reshape_layer.hpp"
+#include "caffe/layers/rnn_layer.hpp"
+#include "caffe/layers/scale_layer.hpp"
+#include "caffe/layers/sigmoid_cross_entropy_loss_layer.hpp"
+#include "caffe/layers/sigmoid_layer.hpp"
+#include "caffe/layers/silence_layer.hpp"
+#include "caffe/layers/slice_layer.hpp"
+#include "caffe/layers/softmax_layer.hpp"
+#include "caffe/layers/softmax_loss_layer.hpp"
+#include "caffe/layers/split_layer.hpp"
+#include "caffe/layers/spp_layer.hpp"
+#include "caffe/layers/tanh_layer.hpp"
+#include "caffe/layers/threshold_layer.hpp"
+#include "caffe/layers/tile_layer.hpp"
+
+namespace caffe {
+
+#define LAYER_REGISTERER(name) \
+	extern LayerRegisterer<float> g_creator_f_##name; \
+	LayerRegisterer<float>* p_g_creator_f_##name = &g_creator_f_##name;
+
+LAYER_REGISTERER(LSTM);
+LAYER_REGISTERER(Exp);
+LAYER_REGISTERER(Split);
+LAYER_REGISTERER(BatchNorm);
+LAYER_REGISTERER(Eltwise);
+LAYER_REGISTERER(Filter);
+LAYER_REGISTERER(LSTMUnit);
+LAYER_REGISTERER(EuclideanLoss);
+LAYER_REGISTERER(Flatten);
+LAYER_REGISTERER(Crop);
+LAYER_REGISTERER(AbsVal);
+LAYER_REGISTERER(MultinomialLogisticLoss);
+LAYER_REGISTERER(Im2col);
+LAYER_REGISTERER(Scale);
+LAYER_REGISTERER(RNN);
+LAYER_REGISTERER(SoftmaxWithLoss);
+LAYER_REGISTERER(SPP);
+LAYER_REGISTERER(PReLU);
+LAYER_REGISTERER(Power);
+LAYER_REGISTERER(Reduction);
+LAYER_REGISTERER(Tile);
+LAYER_REGISTERER(Input);
+LAYER_REGISTERER(HingeLoss);
+LAYER_REGISTERER(Reshape);
+LAYER_REGISTERER(BatchReindex);
+LAYER_REGISTERER(DummyData);
+LAYER_REGISTERER(Threshold);
+LAYER_REGISTERER(InnerProduct);
+LAYER_REGISTERER(ArgMax);
+LAYER_REGISTERER(ContrastiveLoss);
+LAYER_REGISTERER(Concat);
+LAYER_REGISTERER(ELU);
+LAYER_REGISTERER(Deconvolution);
+LAYER_REGISTERER(Dropout);
+LAYER_REGISTERER(Silence);
+LAYER_REGISTERER(MVN);
+LAYER_REGISTERER(Embed);
+LAYER_REGISTERER(Bias);
+LAYER_REGISTERER(Accuracy);
+LAYER_REGISTERER(Parameter);
+LAYER_REGISTERER(InfogainLoss);
+LAYER_REGISTERER(Log);
+LAYER_REGISTERER(SigmoidCrossEntropyLoss);
+LAYER_REGISTERER(BNLL);
+LAYER_REGISTERER(Slice);
+LAYER_REGISTERER(Convolution);
+LAYER_REGISTERER(Pooling);
+LAYER_REGISTERER(LRN);
+LAYER_REGISTERER(ReLU);
+LAYER_REGISTERER(Sigmoid);
+LAYER_REGISTERER(Softmax);
+LAYER_REGISTERER(TanH);
+#ifdef WITH_PYTHON_LAYER
+LAYER_REGISTERER(Python);
+#endif
+LAYER_REGISTERER(CuDNNConvolution);
+LAYER_REGISTERER(CuDNNLCN);
+LAYER_REGISTERER(CuDNNLRN);
+LAYER_REGISTERER(CuDNNPooling);
+LAYER_REGISTERER(CuDNNReLU);
+LAYER_REGISTERER(CuDNNSigmoid);
+LAYER_REGISTERER(CuDNNSoftmax);
+LAYER_REGISTERER(CuDNNTanH);
+
+}
