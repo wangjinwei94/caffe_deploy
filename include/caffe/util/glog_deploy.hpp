@@ -12,13 +12,23 @@
 #include <execinfo.h>
 #endif
 
+class GlogDeoloyNullStream: public std::ostream {
+public:
+	GlogDeoloyNullStream(): std::ostream(nullptr) {
+	}
+	template <typename T>
+	inline GlogDeoloyNullStream& operator<<(T const & x) {
+		return *this;
+	}
+};
+static GlogDeoloyNullStream glog_deploy_null_stream;
+
 class GlogDeployLogMessage {
 public:
-	GlogDeployLogMessage(const std::string& level): level(level) {}
+	GlogDeployLogMessage(const std::string& level): level(level),
+			stream(enable?std::cerr:glog_deploy_null_stream) {
+	}
 	~GlogDeployLogMessage() {
-		if(enable || level=="FATAL") {
-			std::cerr<<stream.str()<<std::endl;
-		}
 		if(level=="FATAL") {
 #if defined(__linux__) && defined(__GNUC__)
 			const int max_trace_num=20;
@@ -37,7 +47,7 @@ public:
 		}
 	}
 	static bool enable;
-	std::stringstream stream;
+	std::ostream& stream;
 	
 private:
 	std::string level;
