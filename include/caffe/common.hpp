@@ -111,8 +111,9 @@ class Caffe {
     return Get().curand_generator_;
   }
   static void* GpuBuffer(size_t size);
-  static void KeepGpuBuffer(void);
-  static void ReleaseGpuBuffer(void);
+  static void ReleaseGpuBuffer(const void* buffer);
+  static void ClearGpuBuffer(void);
+  static void* GpuWorkspace(size_t size);
 #ifdef USE_CUDNN
   inline static cudnnHandle_t cudnn_handle() {
     return Get().cudnn_handle_;
@@ -120,8 +121,9 @@ class Caffe {
 #endif
 #endif
   static void* CpuBuffer(size_t size);
-  static void KeepCpuBuffer(void);
-  static void ReleaseCpuBuffer(void);
+  static void ReleaseCpuBuffer(const void* buffer);
+  static void ClearCpuBuffer(void);
+  static void* CpuWorkspace(size_t size);
 
   // Returns the mode: running on CPU or GPU.
   inline static Brew mode() { return Get().mode_; }
@@ -151,14 +153,18 @@ class Caffe {
   bool device_set_;
   vector<void*> gpu_buffer_ptr_;
   vector<size_t> gpu_buffer_size_;
-  int gpu_buffer_counter_;
+  vector<bool> gpu_buffer_used_;
+  void* gpu_workspace_;
+  size_t gpu_workspace_size_;
 #ifdef USE_CUDNN
   cudnnHandle_t cudnn_handle_;
 #endif
 #endif
   vector<void*> cpu_buffer_ptr_;
   vector<size_t> cpu_buffer_size_;
-  int cpu_buffer_counter_;
+  vector<bool> cpu_buffer_used_;
+  void* cpu_workspace_;
+  size_t cpu_workspace_size_;
   shared_ptr<RNG> random_generator_;
 
   Brew mode_;

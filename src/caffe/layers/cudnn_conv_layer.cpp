@@ -185,7 +185,6 @@ void CuDNNConvolutionLayer<Dtype>::Forward_gpu(
   for (int i = 0; i < bottom.size(); ++i) {
     const Dtype* bottom_data = bottom[i]->gpu_data();
     Dtype* top_data = top[i]->mutable_gpu_data();
-
     // Forward through cuDNN in parallel over groups.
     for (int g = 0; g < this->group_; g++) {
       // Filters.
@@ -197,8 +196,8 @@ void CuDNNConvolutionLayer<Dtype>::Forward_gpu(
             weight + this->weight_offset_ * g,
             conv_descs_[i],
             fwd_algo_[i],
-            // warning: Gpu buffer may be NULL
-            Caffe::GpuBuffer(workspace_fwd_sizes_[i]),
+            // warning: GpuWorkspace may be NULL
+            Caffe::GpuWorkspace(workspace_fwd_sizes_[i]),
             workspace_fwd_sizes_[i],
             cudnn::dataType<Dtype>::zero,
             top_descs_[i],
@@ -259,8 +258,8 @@ void CuDNNConvolutionLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
               top_diff + top_offset_ * g,
               conv_descs_[i],
               bwd_filter_algo_[i],
-              // warning: Gpu buffer may be NULL
-              Caffe::GpuBuffer(workspace_bwd_filter_sizes_[i]),
+              // warning: GpuWorkspace may be NULL
+              Caffe::GpuWorkspace(workspace_bwd_filter_sizes_[i]),
               workspace_bwd_filter_sizes_[i],
               cudnn::dataType<Dtype>::one,
               filter_desc_,
@@ -282,8 +281,8 @@ void CuDNNConvolutionLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
               top_diff + top_offset_ * g,
               conv_descs_[i],
               bwd_data_algo_[i],
-              // warning: Gpu buffer may be NULL
-              Caffe::GpuBuffer(workspace_bwd_data_sizes_[i]),
+              // warning: GpuWorkspace may be NULL
+              Caffe::GpuWorkspace(workspace_bwd_data_sizes_[i]),
               workspace_bwd_data_sizes_[i],
               cudnn::dataType<Dtype>::zero,
               bottom_descs_[i],

@@ -53,13 +53,14 @@ int64_t cluster_seedgen(void) {
 #ifdef CPU_ONLY  // CPU-only Caffe.
 
 Caffe::Caffe()
-    : cpu_buffer_counter_(0), random_generator_(), mode_(Caffe::CPU) { }
+    : random_generator_(), mode_(Caffe::CPU), cpu_workspace_(nullptr), cpu_workspace_size_(0) { }
 
 Caffe::~Caffe() {
   for(size_t i=0; i<cpu_buffer_ptr_.size(); i++) {
-    if(cpu_buffer_ptr_[i]!=NULL) {
-      free(cpu_buffer_ptr_[i]);
-    }
+    free(cpu_buffer_ptr_[i]);
+  }
+  if(cpu_workspace_size_>0) {
+    free(cpu_workspace_);
   }
 }
 
@@ -111,11 +112,12 @@ void* Caffe::RNG::generator() {
 #else  // Normal GPU + CPU Caffe.
 
 Caffe::Caffe()
-    : cublas_handle_(NULL), curand_generator_(NULL), device_set_(false), gpu_buffer_counter_(0),
+    : cublas_handle_(NULL), curand_generator_(NULL), device_set_(false),
 #ifdef USE_CUDNN
     cudnn_handle_(NULL),
 #endif
-    cpu_buffer_counter_(0), random_generator_(), mode_(Caffe::CPU) {
+    random_generator_(), mode_(Caffe::CPU), gpu_workspace_(nullptr), gpu_workspace_size_(0),
+    cpu_workspace_(nullptr), cpu_workspace_size_(0) {
   // // Try to create a cublas handler, and report an error if failed (but we will
   // // keep the program running as one might just want to run CPU code).
   // if (cublasCreate(&cublas_handle_) != CUBLAS_STATUS_SUCCESS) {
@@ -136,15 +138,16 @@ Caffe::~Caffe() {
     CURAND_CHECK(curandDestroyGenerator(curand_generator_));
   }
   for(size_t i=0; i<gpu_buffer_ptr_.size(); i++) {
-    if(gpu_buffer_ptr_[i]!=NULL) {
-      // TODO: Jinwei: driver Shutting down
-      // CUDA_CHECK(cudaFree(gpu_buffer_ptr_[i]));
-    }
+    CUDA_CHECK(cudaFree(gpu_buffer_ptr_[i]));
   }
   for(size_t i=0; i<cpu_buffer_ptr_.size(); i++) {
-    if(cpu_buffer_ptr_[i]!=NULL) {
-      free(cpu_buffer_ptr_[i]);
-    }
+    CUDA_CHECK(cudaFreeHost(cpu_buffer_ptr_[i]));
+  }
+  if(gpu_workspace_size_>0) {
+    CUDA_CHECK(cudaFree(gpu_workspace_));
+  }
+  if(cpu_workspace_size_>0) {
+    free(cpu_workspace_);
   }
 #ifdef USE_CUDNN
   if(cudnn_handle_) {
@@ -219,39 +222,83 @@ void Caffe::SetDevice(const int device_id) {
 }
 
 void* Caffe::GpuBuffer(size_t size) {
-  int index=Get().gpu_buffer_counter_;
-  CHECK(Get().device_set_);
-  if(Get().gpu_buffer_ptr_.size()<index+1) {
-    Get().gpu_buffer_ptr_.resize(index+1, NULL);
-    Get().gpu_buffer_size_.resize(index+1, 0);
+  if(size==0) {
+    return nullptr;
   }
-  if(size>Get().gpu_buffer_size_[index]) {
+  vector<void*>& buffer_v=Get().gpu_buffer_ptr_;
+  vector<size_t>& size_v=Get().gpu_buffer_size_;
+  vector<bool>& used_v=Get().gpu_buffer_used_;
+  for(size_t i=0; i<buffer_v.size(); i++) {
+    if(size_v[i]>=size && !used_v[i]) {
+      used_v[i]=true;
+      return buffer_v[i];
+    }
+  }
+  void* new_ptr;
+  cudaError_t err=cudaMalloc(&new_ptr, size);
+  if(err==cudaSuccess) {
+    buffer_v.push_back(new_ptr);
+    size_v.push_back(size);
+    used_v.push_back(true);
+    return new_ptr;
+  }
+  else {
+    return nullptr;
+  }
+}
+
+void Caffe::ReleaseGpuBuffer(const void* buffer) {
+  if(buffer==nullptr) {
+    return;
+  }
+  vector<void*>& buffer_v=Get().gpu_buffer_ptr_;
+  vector<bool>& used_v=Get().gpu_buffer_used_;
+  for(size_t i=0; i<buffer_v.size(); i++) {
+    if(buffer_v[i]==buffer) {
+      used_v[i]=false;
+    }
+  }
+}
+
+void Caffe::ClearGpuBuffer(void) {
+  vector<void*> new_buffer;
+  vector<size_t> new_size;
+  vector<bool> new_used;
+  vector<void*>& buffer_v=Get().gpu_buffer_ptr_;
+  vector<size_t>& size_v=Get().gpu_buffer_size_;
+  vector<bool>& used_v=Get().gpu_buffer_used_;
+  for(size_t i=0; i<buffer_v.size(); i++) {
+    if(!used_v[i]) {
+      CUDA_CHECK(cudaFree(buffer_v[i]));
+    }
+    else {
+      new_buffer.push_back(buffer_v[i]);
+      new_size.push_back(size_v[i]);
+      new_used.push_back(used_v[i]);
+    }
+  }
+  buffer_v=new_buffer;
+  size_v=new_size;
+  used_v=new_used;
+}
+
+void* Caffe::GpuWorkspace(size_t size) {
+  if(Get().gpu_workspace_size_>=size) {
+    return Get().gpu_workspace_;
+  }
+  else {
     void* new_ptr;
     cudaError_t err=cudaMalloc(&new_ptr, size);
     if(err==cudaSuccess) {
-      if(Get().gpu_buffer_ptr_[index]!=NULL) {
-        CUDA_CHECK(cudaFree(Get().gpu_buffer_ptr_[index]));
-      }
-      Get().gpu_buffer_ptr_[index]=new_ptr;
-      Get().gpu_buffer_size_[index]=size;
-      return Get().gpu_buffer_ptr_[index];
+      CUDA_CHECK(cudaFree(Get().gpu_workspace_));
+      Get().gpu_workspace_size_=size;
+      Get().gpu_workspace_=new_ptr;
+      return new_ptr;
     }
     else {
-      return NULL;
+      return nullptr;
     }
   }
-  else {
-    return Get().gpu_buffer_ptr_[index];
-  }
-}
-
-void Caffe::KeepGpuBuffer(void) {
-  Get().gpu_buffer_counter_++;
-}
-
-void Caffe::ReleaseGpuBuffer(void) {
-  Get().gpu_buffer_counter_--;
-  CHECK_GE(Get().gpu_buffer_counter_, 0);
 }
 
 void Caffe::DeviceQuery() {
@@ -410,37 +457,95 @@ const char* curandGetErrorString(curandStatus_t error) {
 #endif  // CPU_ONLY
 
 void* Caffe::CpuBuffer(size_t size) {
-  int index=Get().cpu_buffer_counter_;
-  if(Get().cpu_buffer_ptr_.size()<index+1) {
-    Get().cpu_buffer_ptr_.resize(index+1, NULL);
-    Get().cpu_buffer_size_.resize(index+1, 0);
+  if(size==0) {
+    return nullptr;
   }
-  if(size>Get().cpu_buffer_size_[index]) {
-    void* new_ptr=malloc(size);
-    if(new_ptr!=NULL) {
-      if(Get().cpu_buffer_ptr_[index]!=NULL) {
-        free(Get().cpu_buffer_ptr_[index]);
-      }
-      Get().cpu_buffer_ptr_[index]=new_ptr;
-      Get().cpu_buffer_size_[index]=size;
-      return Get().cpu_buffer_ptr_[index];
+  vector<void*>& buffer_v=Get().cpu_buffer_ptr_;
+  vector<size_t>& size_v=Get().cpu_buffer_size_;
+  vector<bool>& used_v=Get().cpu_buffer_used_;
+  for(size_t i=0; i<buffer_v.size(); i++) {
+    if(size_v[i]>=size && !used_v[i]) {
+      used_v[i]=true;
+      return buffer_v[i];
+    }
+  }
+#ifndef CPU_ONLY
+  void* new_ptr;
+  cudaError_t err=cudaMallocHost(&new_ptr, size);
+  if(err==cudaSuccess) {
+#else  // CPU_ONLY
+  void* new_ptr=malloc(size);
+  if(new_ptr!=nullptr) {
+#endif  // CPU_ONLY
+    buffer_v.push_back(new_ptr);
+    size_v.push_back(size);
+    used_v.push_back(true);
+  }
+  return new_ptr;
+}
+
+void Caffe::ReleaseCpuBuffer(const void* buffer) {
+  if(buffer==nullptr) {
+    return;
+  }
+  vector<void*>& buffer_v=Get().cpu_buffer_ptr_;
+  vector<bool>& used_v=Get().cpu_buffer_used_;
+  for(size_t i=0; i<buffer_v.size(); i++) {
+    if(buffer_v[i]==buffer) {
+      used_v[i]=false;
+    }
+  }
+}
+
+void Caffe::ClearCpuBuffer(void) {
+  vector<void*> new_buffer;
+  vector<size_t> new_size;
+  vector<bool> new_used;
+  vector<void*>& buffer_v=Get().cpu_buffer_ptr_;
+  vector<size_t>& size_v=Get().cpu_buffer_size_;
+  vector<bool>& used_v=Get().cpu_buffer_used_;
+  for(size_t i=0; i<buffer_v.size(); i++) {
+    if(!used_v[i]) {
+#ifndef CPU_ONLY
+      CUDA_CHECK(cudaFreeHost(buffer_v[i]));
+#else  // CPU_ONLY
+      free(buffer_v[i]);
+#endif  // CPU_ONLY
     }
     else {
-      return NULL;
+      new_buffer.push_back(buffer_v[i]);
+      new_size.push_back(size_v[i]);
+      new_used.push_back(used_v[i]);
     }
   }
-  else {
-    return Get().cpu_buffer_ptr_[index];
+  buffer_v=new_buffer;
+  size_v=new_size;
+  used_v=new_used;
+}
+
+void* Caffe::CpuWorkspace(size_t size) {
+  if(Get().cpu_workspace_size_>=size) {
+    return Get().cpu_workspace_;
   }
-}
-
-void Caffe::KeepCpuBuffer(void) {
-  Get().cpu_buffer_counter_++;
-}
-
-void Caffe::ReleaseCpuBuffer(void) {
-  Get().cpu_buffer_counter_--;
-  CHECK_GE(Get().cpu_buffer_counter_, 0);
+  else {
+#ifndef CPU_ONLY
+    void* new_ptr;
+    cudaError_t err=cudaMallocHost(&new_ptr, size);
+    if(err==cudaSuccess) {
+      CUDA_CHECK(cudaFreeHost(Get().cpu_workspace_));
+#else  // CPU_ONLY
+    void* new_ptr=malloc(size);
+    if(new_ptr!=nullptr) {
+      free(Get().cpu_workspace_);
+#endif  // CPU_ONLY
+      Get().cpu_workspace_size_=size;
+      Get().cpu_workspace_=new_ptr;
+      return new_ptr;
+    }
+    else {
+      return nullptr;
+    }
+  }
 }
 
 }  // namespace caffe
