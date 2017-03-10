@@ -289,20 +289,6 @@ class Layer {
   virtual inline bool IsSharingData(int top_id, int bottom_id) { return false; }
   virtual inline bool IsSharingDiff(int top_id, int bottom_id) { return false; }
 
- protected:
-  /** The protobuf that stores the layer parameters */
-  LayerParameter layer_param_;
-  /** The phase: TRAIN or TEST */
-  Phase phase_;
-  /** The vector that stores the learnable parameters as a set of blobs. */
-  vector<shared_ptr<Blob<Dtype> > > blobs_;
-  /** Vector indicating whether to compute the diff of each param blob. */
-  vector<bool> param_propagate_down_;
-
-  /** The vector that indicates whether each top blob has a non-zero weight in
-   *  the objective function. */
-  vector<Dtype> loss_;
-
   /** @brief Using the CPU device, compute the layer output. */
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) = 0;
@@ -334,6 +320,20 @@ class Layer {
     // LOG(WARNING) << "Using CPU code as backup.";
     Backward_cpu(top, propagate_down, bottom);
   }
+
+ protected:
+  /** The protobuf that stores the layer parameters */
+  LayerParameter layer_param_;
+  /** The phase: TRAIN or TEST */
+  Phase phase_;
+  /** The vector that stores the learnable parameters as a set of blobs. */
+  vector<shared_ptr<Blob<Dtype> > > blobs_;
+  /** Vector indicating whether to compute the diff of each param blob. */
+  vector<bool> param_propagate_down_;
+
+  /** The vector that indicates whether each top blob has a non-zero weight in
+   *  the objective function. */
+  vector<Dtype> loss_;
 
   /**
    * Called by the parent Layer's SetUp to check that the number of bottom
