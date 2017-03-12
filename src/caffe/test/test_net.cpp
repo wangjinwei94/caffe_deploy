@@ -36,6 +36,9 @@ class NetTest : public MultiDeviceTest<TypeParam> {
     NetParameter param;
     CHECK(google::protobuf::TextFormat::ParseFromString(proto, &param));
     net_.reset(new Net<Dtype>(param));
+    for(size_t i=0; i<net_->params().size(); i++) {
+      caffe_set(net_->params()[i]->count(), Dtype(0), net_->params()[i]->mutable_cpu_diff());
+    }
   }
 
   virtual void InitNetFromProtoFileWithState(const string& proto,
@@ -47,6 +50,9 @@ class NetTest : public MultiDeviceTest<TypeParam> {
     MakeTempFilename(&param_file);
     WriteProtoToTextFile(param, param_file);
     net_.reset(new Net<Dtype>(param_file, phase, level, stages));
+    for(size_t i=0; i<net_->params().size(); i++) {
+      caffe_set(net_->params()[i]->count(), Dtype(0), net_->params()[i]->mutable_cpu_diff());
+    }
   }
 
   virtual void CopyNetBlobs(const bool copy_diff,
@@ -971,7 +977,7 @@ TYPED_TEST(NetTest, TestLossWeight) {
     Caffe::set_random_seed(this->seed_);
     this->InitUnsharedWeightsNet(&kLossWeights[i], NULL, kForceBackward);
     const Dtype weighted_loss = this->net_->ForwardBackward();
-    const Dtype error_margin = kErrorMargin * fabs(kLossWeights[i]);
+    const Dtype error_margin = kErrorMargin * fabs(kLossWeights[i]) + 0.00001f;
     EXPECT_NEAR(loss * kLossWeights[i], weighted_loss, error_margin)
         << "loss weight = " << kLossWeights[i];
     const vector<shared_ptr<Blob<Dtype> > >& weighted_blobs =
@@ -1021,7 +1027,7 @@ TYPED_TEST(NetTest, TestLossWeightMidNet) {
     this->InitUnsharedWeightsNet(&loss_weight, &kLossWeights[i],
                                  kForceBackward);
     const Dtype weighted_loss = this->net_->ForwardBackward();
-    const Dtype error_margin = kErrorMargin * fabs(kLossWeights[i]);
+    const Dtype error_margin = kErrorMargin * fabs(kLossWeights[i]) + 0.00001f;
     EXPECT_NEAR(loss * kLossWeights[i], weighted_loss, error_margin)
         << "loss weight = " << kLossWeights[i];
     const shared_ptr<Blob<Dtype> >& weighted_blob =

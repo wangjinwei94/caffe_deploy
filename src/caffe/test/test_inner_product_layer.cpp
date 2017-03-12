@@ -329,6 +329,7 @@ TYPED_TEST(InnerProductLayerTest, TestBackwardTranspose) {
       diff->cpu_data(),
       this->blob_top_vec_[0]->mutable_cpu_diff());
     vector<bool> propagate_down(1, true);
+    FlushLayerBlobsDiff(layer.get());
     layer->Backward(this->blob_top_vec_,
         propagate_down,
         this->blob_bottom_vec_);
@@ -366,6 +367,7 @@ TYPED_TEST(InnerProductLayerTest, TestBackwardTranspose) {
     caffe_copy(this->blob_top_vec_[0]->count(),
       diff->cpu_data(),
       this->blob_top_vec_[0]->mutable_cpu_diff());
+    FlushLayerBlobsDiff(ip_t.get());
     ip_t->Backward(this->blob_top_vec_, propagate_down, this->blob_bottom_vec_);
     const Dtype* data = w->cpu_diff();
     const Dtype* data_t = ip_t->blobs()[0]->cpu_diff();

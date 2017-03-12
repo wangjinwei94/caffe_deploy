@@ -29,7 +29,8 @@ inline void SyncedMemory::to_cpu() {
   switch (head_) {
   case UNINITIALIZED:
     cpu_ptr_=Caffe::CpuBuffer(size_);
-    caffe_memset(size_, 0, cpu_ptr_);
+    // TODO: Jinwei: clear memory may cause bad performance
+    // caffe_memset(size_, 0, cpu_ptr_);
     head_ = HEAD_AT_CPU;
     own_cpu_data_ = true;
     break;
@@ -56,7 +57,8 @@ inline void SyncedMemory::to_gpu() {
   switch (head_) {
   case UNINITIALIZED:
     gpu_ptr_=Caffe::GpuBuffer(size_);
-    caffe_gpu_memset(size_, 0, gpu_ptr_);
+    // TODO: Jinwei: clear memory may cause bad performance
+    // caffe_gpu_memset(size_, 0, gpu_ptr_);
     head_ = HEAD_AT_GPU;
     own_gpu_data_ = true;
     break;

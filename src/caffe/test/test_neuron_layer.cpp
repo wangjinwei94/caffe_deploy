@@ -786,10 +786,14 @@ TYPED_TEST(NeuronLayerTest, TestPReLUInPlace) {
   // Backward in-place
   vector<bool> propagate_down;
   propagate_down.push_back(true);
+  FlushLayerBlobsDiff(&prelu);
   prelu.Backward(this->blob_top_vec_, propagate_down, this->blob_top_vec_);
+  FlushLayerBlobsDiff(&ip);
   ip.Backward(this->blob_top_vec_, propagate_down, this->blob_bottom_vec_);
   // Backward non-in-place
+  FlushLayerBlobsDiff(&prelu2);
   prelu2.Backward(blob_top_vec_2, propagate_down, blob_middle_vec_2);
+  FlushLayerBlobsDiff(&ip2);
   ip2.Backward(blob_middle_vec_2, propagate_down, blob_bottom_vec_2);
   // Check numbers
   for (int s = 0; s < blob_bottom_2->count(); ++s) {

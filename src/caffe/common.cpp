@@ -11,6 +11,7 @@
 
 #include "caffe/common.hpp"
 #include "caffe/util/rng.hpp"
+#include "caffe/util/math_functions.hpp"
 
 bool GlogDeployLogMessage::enable=false;
 
@@ -237,6 +238,7 @@ void* Caffe::GpuBuffer(size_t size) {
   void* new_ptr;
   cudaError_t err=cudaMalloc(&new_ptr, size);
   if(err==cudaSuccess) {
+    caffe_gpu_memset(size, 0, new_ptr);
     buffer_v.push_back(new_ptr);
     size_v.push_back(size);
     used_v.push_back(true);
@@ -477,6 +479,7 @@ void* Caffe::CpuBuffer(size_t size) {
   void* new_ptr=malloc(size);
   if(new_ptr!=nullptr) {
 #endif  // CPU_ONLY
+    caffe_memset(size, 0, new_ptr);
     buffer_v.push_back(new_ptr);
     size_v.push_back(size);
     used_v.push_back(true);

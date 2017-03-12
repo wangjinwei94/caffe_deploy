@@ -69,6 +69,7 @@ void caffe_conv(const Blob<Dtype>* in, ConvolutionParameter* conv_param,
   vector<int> in_offset(4 + has_depth);
   vector<int> out_offset(4 + has_depth);
   Dtype* out_data = out->mutable_cpu_data();
+  caffe_set(out->count(), Dtype(0), out_data);
   for (int n = 0; n < out->shape(0); n++) {
     for (int g = 0; g < groups; g++) {
       o_head = o_g * g;

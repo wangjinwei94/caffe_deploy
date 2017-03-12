@@ -144,11 +144,6 @@ TYPED_TEST(DummyDataLayerTest, TestThreeTopConstantGaussianConstant) {
   for (int i = 0; i < this->blob_top_a_->count(); ++i) {
     EXPECT_EQ(7, this->blob_top_a_->cpu_data()[i]);
   }
-  // Blob b uses a Gaussian filler, so SetUp should not have initialized it.
-  // Blob b's data should therefore be the default Blob data value: 0.
-  for (int i = 0; i < this->blob_top_b_->count(); ++i) {
-    EXPECT_EQ(0, this->blob_top_b_->cpu_data()[i]);
-  }
   for (int i = 0; i < this->blob_top_c_->count(); ++i) {
     EXPECT_EQ(9, this->blob_top_c_->cpu_data()[i]);
   }

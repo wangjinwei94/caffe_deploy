@@ -10,6 +10,7 @@
 #include <cstdlib>
 
 #include "caffe/common.hpp"
+#include "caffe/layer.hpp"
 
 using std::cout;
 using std::endl;
@@ -76,6 +77,13 @@ typedef ::testing::Types<CPUDevice<float>, GPUDevice<float> >
                          TestDtypesAndDevices;
 
 #endif
+
+template <typename Dtype>
+static void FlushLayerBlobsDiff(Layer<Dtype>* layer) {
+  for(size_t i=0; i<layer->blobs().size(); i++) {
+    caffe_set<Dtype>(layer->blobs()[i]->count(), Dtype(0), layer->blobs()[i]->mutable_cpu_diff());
+  }
+}
 
 }  // namespace caffe
 
