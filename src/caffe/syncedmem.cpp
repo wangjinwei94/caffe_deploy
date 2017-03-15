@@ -14,15 +14,15 @@ void SyncedMemory::Clear() {
 #ifndef CPU_ONLY
   if (gpu_ptr_ && own_gpu_data_) {
     Caffe::ReleaseGpuBuffer(gpu_ptr_);
-    gpu_ptr_ = NULL;
-    own_gpu_data_ = false;
   }
+  gpu_ptr_ = NULL;
+  own_gpu_data_ = false;
 #endif  // CPU_ONLY
   head_ = UNINITIALIZED;
 }
 
 SyncedMemory::~SyncedMemory() {
-    Clear();
+  Clear();
 }
 
 inline void SyncedMemory::to_cpu() {
