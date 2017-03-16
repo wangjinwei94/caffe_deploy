@@ -1,3 +1,13 @@
+# Important
+
+to improve the performance when construct and destruct SyncedMemory frequently
+
+a toy GPU / CPU memory pool was used to allocate memory
+
+and memory initialization in SyncedMemory (caffe_gpu_memset and memset) was removed
+
+so if you create a new Blob, the data in it <font color=red size=5>IS NOT INITIALIZED</font>, you should initialize it by yourself if needed
+
 # Dependency
 
 cublas, cudart, curand (if CPU_ONLY is cleared)
