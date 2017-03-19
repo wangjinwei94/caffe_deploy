@@ -310,7 +310,6 @@ void Caffe::ReleaseGpuBuffer(const void* buffer) {
             MemoryNode* next=node->next;
             node->next=node->next->next;
             delete next;
-            break;
           }
           else {
             node=node->next;
@@ -607,7 +606,6 @@ void Caffe::ReleaseCpuBuffer(const void* buffer) {
             MemoryNode* next=node->next;
             node->next=node->next->next;
             delete next;
-            break;
           }
           else {
             node=node->next;
