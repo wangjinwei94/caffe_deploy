@@ -69,6 +69,8 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
+class MemoryNode;
+
 // A singleton class to hold common caffe stuff, such as the handler that
 // caffe is going to use for cublas, curand, etc.
 class Caffe {
@@ -151,18 +153,14 @@ class Caffe {
   cublasHandle_t cublas_handle_;
   curandGenerator_t curand_generator_;
   bool device_set_;
-  vector<void*> gpu_buffer_ptr_;
-  vector<size_t> gpu_buffer_size_;
-  vector<bool> gpu_buffer_used_;
+  vector<MemoryNode*> gpu_memory_list_;
   void* gpu_workspace_;
   size_t gpu_workspace_size_;
 #ifdef USE_CUDNN
   cudnnHandle_t cudnn_handle_;
 #endif
 #endif
-  vector<void*> cpu_buffer_ptr_;
-  vector<size_t> cpu_buffer_size_;
-  vector<bool> cpu_buffer_used_;
+  vector<MemoryNode*> cpu_memory_list_;
   void* cpu_workspace_;
   size_t cpu_workspace_size_;
   shared_ptr<RNG> random_generator_;

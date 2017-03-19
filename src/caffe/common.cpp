@@ -57,9 +57,8 @@ Caffe::Caffe()
     : random_generator_(), mode_(Caffe::CPU), cpu_workspace_(nullptr), cpu_workspace_size_(0) { }
 
 Caffe::~Caffe() {
-  for(size_t i=0; i<cpu_buffer_ptr_.size(); i++) {
-    free(cpu_buffer_ptr_[i]);
-  }
+  ClearCpuBuffer();
+  CHECK_EQ(cpu_memory_list_.size(), 0);
   if(cpu_workspace_size_>0) {
     free(cpu_workspace_);
   }
@@ -138,17 +137,15 @@ Caffe::~Caffe() {
   if (curand_generator_) {
     CURAND_CHECK(curandDestroyGenerator(curand_generator_));
   }
-  for(size_t i=0; i<gpu_buffer_ptr_.size(); i++) {
-    CUDA_CHECK(cudaFree(gpu_buffer_ptr_[i]));
-  }
-  for(size_t i=0; i<cpu_buffer_ptr_.size(); i++) {
-    CUDA_CHECK(cudaFreeHost(cpu_buffer_ptr_[i]));
-  }
+  ClearGpuBuffer();
+  CHECK_EQ(gpu_memory_list_.size(), 0);
+  ClearCpuBuffer();
+  CHECK_EQ(cpu_memory_list_.size(), 0);
   if(gpu_workspace_size_>0) {
     CUDA_CHECK(cudaFree(gpu_workspace_));
   }
   if(cpu_workspace_size_>0) {
-    free(cpu_workspace_);
+    CUDA_CHECK(cudaFreeHost(Get().cpu_workspace_));
   }
 #ifdef USE_CUDNN
   if(cudnn_handle_) {
@@ -206,13 +203,8 @@ void Caffe::SetDevice(const int device_id) {
         CURAND_RNG_PSEUDO_DEFAULT));
     CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(Get().curand_generator_,
         cluster_seedgen()));
-    for(size_t i=0; i<Get().gpu_buffer_ptr_.size(); i++) {
-      if(Get().gpu_buffer_ptr_[i]!=NULL) {
-        CUDA_CHECK(cudaFree(Get().gpu_buffer_ptr_[i]));
-      }
-    }
-    Get().gpu_buffer_ptr_.clear();
-    Get().gpu_buffer_size_.clear();
+    ClearGpuBuffer();
+    CHECK_EQ(Get().gpu_memory_list_.size(), 0);
 #ifdef USE_CUDNN
     if (Get().cudnn_handle_) {
       CUDNN_CHECK(cudnnDestroy(Get().cudnn_handle_));
@@ -222,26 +214,65 @@ void Caffe::SetDevice(const int device_id) {
   }
 }
 
+struct MemoryNode {
+  void* ptr;
+  bool used;
+  size_t size;
+  size_t size_after;
+  MemoryNode* next;
+};
+
 void* Caffe::GpuBuffer(size_t size) {
   if(size==0) {
     return nullptr;
   }
-  vector<void*>& buffer_v=Get().gpu_buffer_ptr_;
-  vector<size_t>& size_v=Get().gpu_buffer_size_;
-  vector<bool>& used_v=Get().gpu_buffer_used_;
-  for(size_t i=0; i<buffer_v.size(); i++) {
-    if(size_v[i]>=size && !used_v[i]) {
-      used_v[i]=true;
-      return buffer_v[i];
+  vector<MemoryNode*>& memory_list=Get().gpu_memory_list_;
+  for(size_t i=0; i<memory_list.size(); i++) {
+    void* ptr=nullptr;
+    MemoryNode* node=memory_list[i];
+    for(;;) {
+      if(!node->used && node->size>=size) {
+        ptr=node->ptr;
+        node->used=true;
+        if(node->size>size) {
+          MemoryNode* new_node=new MemoryNode;
+          new_node->ptr=static_cast<char*>(node->ptr)+size;
+          new_node->used=false;
+          new_node->size=node->size-size;
+          new_node->size_after=node->size_after-size;
+          new_node->next=node->next;
+          node->size=size;
+          node->next=new_node;
+        }
+        break;
+      }
+      else if(node->size_after-node->size>=size) {
+        if(node->next!=nullptr) {
+          node=node->next;
+        }
+        else {
+          break;
+        }
+      }
+      else {
+        break;
+      }
+    }
+    if(ptr!=nullptr) {
+      return ptr;
     }
   }
   void* new_ptr;
   cudaError_t err=cudaMalloc(&new_ptr, size);
   if(err==cudaSuccess) {
     caffe_gpu_memset(size, 0, new_ptr);
-    buffer_v.push_back(new_ptr);
-    size_v.push_back(size);
-    used_v.push_back(true);
+    MemoryNode* new_node=new MemoryNode;
+    new_node->ptr=new_ptr;
+    new_node->used=true;
+    new_node->size=size;
+    new_node->size_after=size;
+    new_node->next=nullptr;
+    memory_list.push_back(new_node);
     return new_ptr;
   }
   else {
@@ -253,35 +284,60 @@ void Caffe::ReleaseGpuBuffer(const void* buffer) {
   if(buffer==nullptr) {
     return;
   }
-  vector<void*>& buffer_v=Get().gpu_buffer_ptr_;
-  vector<bool>& used_v=Get().gpu_buffer_used_;
-  for(size_t i=0; i<buffer_v.size(); i++) {
-    if(buffer_v[i]==buffer) {
-      used_v[i]=false;
+  vector<MemoryNode*>& memory_list=Get().gpu_memory_list_;
+  for(size_t i=0; i<memory_list.size(); i++) {
+    MemoryNode* node=memory_list[i];
+    bool released=false;
+    for(;;) {
+      if(node->ptr==buffer) {
+        node->used=false;
+        released=true;
+        break;
+      }
+      else if(node->next!=nullptr) {
+        node=node->next;
+      }
+      else {
+        break;
+      }
+    }
+    if(released) {
+      MemoryNode* node=memory_list[i];
+      for(;;) {
+        if(node->next!=nullptr) {
+          if(!node->used && !node->next->used) {
+            node->size+=node->next->size;
+            MemoryNode* next=node->next;
+            node->next=node->next->next;
+            delete next;
+            break;
+          }
+          else {
+            node=node->next;
+          }
+        }
+        else {
+          break;
+        }
+      }
+      break;
     }
   }
 }
 
 void Caffe::ClearGpuBuffer(void) {
-  vector<void*> new_buffer;
-  vector<size_t> new_size;
-  vector<bool> new_used;
-  vector<void*>& buffer_v=Get().gpu_buffer_ptr_;
-  vector<size_t>& size_v=Get().gpu_buffer_size_;
-  vector<bool>& used_v=Get().gpu_buffer_used_;
-  for(size_t i=0; i<buffer_v.size(); i++) {
-    if(!used_v[i]) {
-      CUDA_CHECK(cudaFree(buffer_v[i]));
+  vector<MemoryNode*> new_memory_list;
+  vector<MemoryNode*>& memory_list=Get().gpu_memory_list_;
+  for(size_t i=0; i<memory_list.size(); i++) {
+    if(memory_list[i]->next==nullptr && !memory_list[i]->used) {
+      CUDA_CHECK(cudaFree(memory_list[i]->ptr));
+      delete memory_list[i];
     }
     else {
-      new_buffer.push_back(buffer_v[i]);
-      new_size.push_back(size_v[i]);
-      new_used.push_back(used_v[i]);
+      new_memory_list.push_back(memory_list[i]);
     }
   }
-  buffer_v=new_buffer;
-  size_v=new_size;
-  used_v=new_used;
+  memory_list=new_memory_list;
 }
 
 void* Caffe::GpuWorkspace(size_t size) {
@@ -462,68 +518,127 @@ void* Caffe::CpuBuffer(size_t size) {
   if(size==0) {
     return nullptr;
   }
-  vector<void*>& buffer_v=Get().cpu_buffer_ptr_;
-  vector<size_t>& size_v=Get().cpu_buffer_size_;
-  vector<bool>& used_v=Get().cpu_buffer_used_;
-  for(size_t i=0; i<buffer_v.size(); i++) {
-    if(size_v[i]>=size && !used_v[i]) {
-      used_v[i]=true;
-      return buffer_v[i];
+  vector<MemoryNode*>& memory_list=Get().cpu_memory_list_;
+  for(size_t i=0; i<memory_list.size(); i++) {
+    void* ptr=nullptr;
+    MemoryNode* node=memory_list[i];
+    for(;;) {
+      if(!node->used && node->size>=size) {
+        ptr=node->ptr;
+        node->used=true;
+        if(node->size>size) {
+          MemoryNode* new_node=new MemoryNode;
+          new_node->ptr=static_cast<char*>(node->ptr)+size;
+          new_node->used=false;
+          new_node->size=node->size-size;
+          new_node->size_after=node->size_after-size;
+          new_node->next=node->next;
+          node->size=size;
+          node->next=new_node;
+        }
+        break;
+      }
+      else if(node->size_after-node->size>=size) {
+        if(node->next!=nullptr) {
+          node=node->next;
+        }
+        else {
+          break;
+        }
+      }
+      else {
+        break;
+      }
+    }
+    if(ptr!=nullptr) {
+      return ptr;
     }
   }
-#ifndef CPU_ONLY
+#ifdef CPU_ONLY
+  void* new_ptr=malloc(size);
+  if(new_ptr!=nullptr) {
+#else
   void* new_ptr;
   cudaError_t err=cudaMallocHost(&new_ptr, size);
   if(err==cudaSuccess) {
-#else  // CPU_ONLY
-  void* new_ptr=malloc(size);
-  if(new_ptr!=nullptr) {
-#endif  // CPU_ONLY
+#endif
     caffe_memset(size, 0, new_ptr);
-    buffer_v.push_back(new_ptr);
-    size_v.push_back(size);
-    used_v.push_back(true);
+    MemoryNode* new_node=new MemoryNode;
+    new_node->ptr=new_ptr;
+    new_node->used=true;
+    new_node->size=size;
+    new_node->size_after=size;
+    new_node->next=nullptr;
+    memory_list.push_back(new_node);
+    return new_ptr;
   }
-  return new_ptr;
+  else {
+    return nullptr;
+  }
 }
 
 void Caffe::ReleaseCpuBuffer(const void* buffer) {
   if(buffer==nullptr) {
     return;
   }
-  vector<void*>& buffer_v=Get().cpu_buffer_ptr_;
-  vector<bool>& used_v=Get().cpu_buffer_used_;
-  for(size_t i=0; i<buffer_v.size(); i++) {
-    if(buffer_v[i]==buffer) {
-      used_v[i]=false;
+  vector<MemoryNode*>& memory_list=Get().cpu_memory_list_;
+  for(size_t i=0; i<memory_list.size(); i++) {
+    MemoryNode* node=memory_list[i];
+    bool released=false;
+    for(;;) {
+      if(node->ptr==buffer) {
+        node->used=false;
+        released=true;
+        break;
+      }
+      else if(node->next!=nullptr) {
+        node=node->next;
+      }
+      else {
+        break;
+      }
+    }
+    if(released) {
+      MemoryNode* node=memory_list[i];
+      for(;;) {
+        if(node->next!=nullptr) {
+          if(!node->used && !node->next->used) {
+            node->size+=node->next->size;
+            MemoryNode* next=node->next;
+            node->next=node->next->next;
+            delete next;
+            break;
+          }
+          else {
+            node=node->next;
+          }
+        }
+        else {
+          break;
+        }
+      }
+      break;
     }
   }
 }
 
 void Caffe::ClearCpuBuffer(void) {
-  vector<void*> new_buffer;
-  vector<size_t> new_size;
-  vector<bool> new_used;
-  vector<void*>& buffer_v=Get().cpu_buffer_ptr_;
-  vector<size_t>& size_v=Get().cpu_buffer_size_;
-  vector<bool>& used_v=Get().cpu_buffer_used_;
-  for(size_t i=0; i<buffer_v.size(); i++) {
-    if(!used_v[i]) {
-#ifndef CPU_ONLY
-      CUDA_CHECK(cudaFreeHost(buffer_v[i]));
-#else  // CPU_ONLY
-      free(buffer_v[i]);
-#endif  // CPU_ONLY
+  vector<MemoryNode*> new_memory_list;
+  vector<MemoryNode*>& memory_list=Get().cpu_memory_list_;
+  for(size_t i=0; i<memory_list.size(); i++) {
+    if(memory_list[i]->next==nullptr && !memory_list[i]->used) {
+#ifdef CPU_ONLY
+      free(memory_list[i]->ptr);
+#else
+      CUDA_CHECK(cudaFreeHost(memory_list[i]->ptr));
+#endif
+      delete memory_list[i];
     }
     else {
-      new_buffer.push_back(buffer_v[i]);
-      new_size.push_back(size_v[i]);
-      new_used.push_back(used_v[i]);
+      new_memory_list.push_back(memory_list[i]);
     }
   }
-  buffer_v=new_buffer;
-  size_v=new_size;
-  used_v=new_used;
+  memory_list=new_memory_list;
 }
 
 void* Caffe::CpuWorkspace(size_t size) {
