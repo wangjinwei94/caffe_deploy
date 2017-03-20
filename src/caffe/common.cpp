@@ -222,45 +222,15 @@ void Caffe::set_random_seed(const unsigned int seed) {
 }
 
 void Caffe::SetDevice(const int device_id) {
-  if(!Get().device_set_) {
-    Get().device_set_=true;
-    CUDA_CHECK(cudaSetDevice(device_id));
-    CUBLAS_CHECK(cublasCreate(&Get().cublas_handle_));
-    CURAND_CHECK(curandCreateGenerator(&Get().curand_generator_,
-        CURAND_RNG_PSEUDO_DEFAULT));
-    CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(Get().curand_generator_,
-        cluster_seedgen()));
+  CHECK(!Get().device_set_) << "Can't set device twice.";
+  Get().device_set_=true;
+  CUDA_CHECK(cudaSetDevice(device_id));
+  CUBLAS_CHECK(cublasCreate(&Get().cublas_handle_));
+  CURAND_CHECK(curandCreateGenerator(&Get().curand_generator_, CURAND_RNG_PSEUDO_DEFAULT));
+  CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(Get().curand_generator_, cluster_seedgen()));
 #ifdef USE_CUDNN
-    CUDNN_CHECK(cudnnCreate(&Get().cudnn_handle_));
+  CUDNN_CHECK(cudnnCreate(&Get().cudnn_handle_));
 #endif
-  }
-  else {
-    int current_device;
-    CUDA_CHECK(cudaGetDevice(&current_device));
-    if (current_device == device_id) {
-      return;
-    }
-    CUDA_CHECK(cudaSetDevice(device_id));
-    if (Get().cublas_handle_) {
-      CUBLAS_CHECK(cublasDestroy(Get().cublas_handle_));
-    }
-    if (Get().curand_generator_) {
-      CURAND_CHECK(curandDestroyGenerator(Get().curand_generator_));
-    }
-    CUBLAS_CHECK(cublasCreate(&Get().cublas_handle_));
-    CURAND_CHECK(curandCreateGenerator(&Get().curand_generator_,
-        CURAND_RNG_PSEUDO_DEFAULT));
-    CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(Get().curand_generator_,
-        cluster_seedgen()));
-    ClearGpuBuffer();
-    CHECK_EQ(Get().gpu_memory_list_.size(), 0);
-#ifdef USE_CUDNN
-    if (Get().cudnn_handle_) {
-      CUDNN_CHECK(cudnnDestroy(Get().cudnn_handle_));
-    }
-    CUDNN_CHECK(cudnnCreate(&Get().cudnn_handle_));
-#endif
-  }
 }
 
 void* Caffe::GpuBuffer(size_t size) {
