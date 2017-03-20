@@ -34,8 +34,7 @@ inline void cblas_sgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE
 		std::swap(mat_b_row, mat_b_col);
 	}
 	if(TransA==CblasConjTrans || TransB==CblasConjTrans || lda!=mat_a_col || ldb!=mat_b_col) {
-		fprintf(stderr, "%s, %d\n", __FILE__, __LINE__);
-		abort();
+		NOT_IMPLEMENTED;
 	}
 	if(Order==CblasRowMajor) {
 		Eigen::Map<const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> mat_a(A, mat_a_row, mat_a_col);
@@ -89,8 +88,7 @@ inline void cblas_dgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE
 		std::swap(mat_b_row, mat_b_col);
 	}
 	if(TransA==CblasConjTrans || TransB==CblasConjTrans || lda!=mat_a_col || ldb!=mat_b_col) {
-		fprintf(stderr, "%s, %d\n", __FILE__, __LINE__);
-		abort();
+		NOT_IMPLEMENTED;
 	}
 	if(Order==CblasRowMajor) {
 		Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> mat_a(A, mat_a_row, mat_a_col);
@@ -134,8 +132,7 @@ inline void cblas_sgemv(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE
 		const int M, const int N, const float alpha, const float  *A, const int lda,
 		const float  *X, const int incX, const float beta, float  *Y, const int incY) {
 	if(TransA==CblasConjTrans) {
-		fprintf(stderr, "%s, %d\n", __FILE__, __LINE__);
-		abort();
+		NOT_IMPLEMENTED;
 	}
 	int mat_a_row=M;
 	int mat_a_col=N;
@@ -172,8 +169,7 @@ inline void cblas_dgemv(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE
 		const int M, const int N, const double alpha, const double  *A, const int lda,
 		const double  *X, const int incX, const double beta, double  *Y, const int incY) {
 	if(TransA==CblasConjTrans) {
-		fprintf(stderr, "%s, %d\n", __FILE__, __LINE__);
-		abort();
+		NOT_IMPLEMENTED;
 	}
 	int mat_a_row=M;
 	int mat_a_col=N;
