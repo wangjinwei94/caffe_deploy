@@ -120,8 +120,9 @@ private:
 	inline std::string InfoString(void) {
 		std::time_t time=std::time(nullptr);
 		const std::tm& time_local=*std::localtime(&time);
-		char buf[1000];
-		sprintf(buf, "%02d%02d %02d:%02d:%02d.%06d", time_local.tm_mon+1, time_local.tm_mday, time_local.tm_hour,
+		static const size_t buf_len=21;
+		char buf[buf_len];
+		snprintf(buf, buf_len, "%02d%02d %02d:%02d:%02d.%06d", time_local.tm_mon+1, time_local.tm_mday, time_local.tm_hour,
 				time_local.tm_min, time_local.tm_sec, gettimeus());
 		std::ostringstream ss;
 		ss << level_[0] << buf << " " << getpid() << " " << file_ << ":" << line_ << "]\t";
