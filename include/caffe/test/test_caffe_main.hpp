@@ -3,7 +3,7 @@
 #ifndef CAFFE_TEST_TEST_CAFFE_MAIN_HPP_
 #define CAFFE_TEST_TEST_CAFFE_MAIN_HPP_
 
-#include "caffe/util/glog_deploy.hpp"
+#include <glog_deploy.hpp>
 #include <gtest/gtest.h>
 
 #include <cstdio>

@@ -1,7 +1,7 @@
 #ifndef CAFFE_TEST_GRADIENT_CHECK_UTIL_H_
 #define CAFFE_TEST_GRADIENT_CHECK_UTIL_H_
 
-#include "caffe/util/glog_deploy.hpp"
+#include <glog_deploy.hpp>
 #include <gtest/gtest.h>
 
 #include <algorithm>

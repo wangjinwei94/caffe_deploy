@@ -13,7 +13,7 @@
 #include "caffe/util/rng.hpp"
 #include "caffe/util/math_functions.hpp"
 
-bool GlogDeployLogMessage::enable=false;
+bool __GlogDeployLogMessage::enable=false;
 
 namespace caffe {
 
