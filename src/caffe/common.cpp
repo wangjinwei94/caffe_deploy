@@ -24,6 +24,14 @@ thread_local static std::shared_ptr<Caffe> thread_instance_;
 static std::shared_ptr<Caffe> thread_instance_;
 #endif
 
+struct MemoryNode {
+  void* ptr;
+  bool used;
+  size_t size;
+  size_t size_after;
+  MemoryNode* next;
+};
+
 Caffe& Caffe::Get() {
   if (!thread_instance_.get()) {
     thread_instance_.reset(new Caffe());
@@ -57,8 +65,21 @@ Caffe::Caffe()
     : random_generator_(), mode_(Caffe::CPU), cpu_workspace_(nullptr), cpu_workspace_size_(0) { }
 
 Caffe::~Caffe() {
-  ClearCpuBuffer();
-  CHECK_EQ(cpu_memory_list_.size(), 0);
+  for(size_t i=0; i<cpu_memory_list_.size(); i++) {
+    free(cpu_memory_list_[i]->ptr);
+    vector<MemoryNode*> nodes;
+    MemoryNode* node=cpu_memory_list_[i];
+    while(node!=nullptr) {
+      nodes.push_back(node);
+      node=node->next;
+    }
+    for(const auto& node: nodes) {
+      if(node->used) {
+        LOG(ERROR) << "Memory leak on CPU memory is detected at " << node->ptr << ", size " << node->size;
+      }
+      delete node;
+    }
+  }
   if(cpu_workspace_size_>0) {
     free(cpu_workspace_);
   }
@@ -133,25 +154,53 @@ Caffe::Caffe()
 }
 
 Caffe::~Caffe() {
-  if (cublas_handle_) CUBLAS_CHECK(cublasDestroy(cublas_handle_));
-  if (curand_generator_) {
+  if(cublas_handle_) {
+    CUBLAS_CHECK(cublasDestroy(cublas_handle_));
+  }
+  if(curand_generator_) {
     CURAND_CHECK(curandDestroyGenerator(curand_generator_));
-  }
-  ClearGpuBuffer();
-  CHECK_EQ(gpu_memory_list_.size(), 0);
-  ClearCpuBuffer();
-  CHECK_EQ(cpu_memory_list_.size(), 0);
-  if(gpu_workspace_size_>0) {
-    CUDA_CHECK(cudaFree(gpu_workspace_));
-  }
-  if(cpu_workspace_size_>0) {
-    CUDA_CHECK(cudaFreeHost(Get().cpu_workspace_));
   }
 #ifdef USE_CUDNN
   if(cudnn_handle_) {
     CUDNN_CHECK(cudnnDestroy(cudnn_handle_));
   }
 #endif
+  for(size_t i=0; i<gpu_memory_list_.size(); i++) {
+    cudaFree(gpu_memory_list_[i]->ptr);
+    vector<MemoryNode*> nodes;
+    MemoryNode* node=gpu_memory_list_[i];
+    while(node!=nullptr) {
+      nodes.push_back(node);
+      node=node->next;
+    }
+    for(const auto& node: nodes) {
+      if(node->used) {
+        LOG(ERROR) << "Memory leak on GPU memory is detected at " << node->ptr << ", size " << node->size;
+      }
+      delete node;
+    }
+  }
+  for(size_t i=0; i<cpu_memory_list_.size(); i++) {
+    cudaFreeHost(cpu_memory_list_[i]->ptr);
+    vector<MemoryNode*> nodes;
+    MemoryNode* node=cpu_memory_list_[i];
+    while(node!=nullptr) {
+      nodes.push_back(node);
+      node=node->next;
+    }
+    for(const auto& node: nodes) {
+      if(node->used) {
+        LOG(ERROR) << "Memory leak on CPU memory is detected at " << node->ptr << ", size " << node->size;
+      }
+      delete node;
+    }
+  }
+  if(gpu_workspace_size_>0) {
+    cudaFree(gpu_workspace_);
+  }
+  if(cpu_workspace_size_>0) {
+    cudaFreeHost(Get().cpu_workspace_);
+  }
 }
 
 void Caffe::set_random_seed(const unsigned int seed) {
@@ -213,14 +262,6 @@ void Caffe::SetDevice(const int device_id) {
 #endif
   }
 }
-
-struct MemoryNode {
-  void* ptr;
-  bool used;
-  size_t size;
-  size_t size_after;
-  MemoryNode* next;
-};
 
 void* Caffe::GpuBuffer(size_t size) {
   if(size==0) {
