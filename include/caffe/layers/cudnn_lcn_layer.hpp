@@ -17,8 +17,7 @@ template <typename Dtype>
 class CuDNNLCNLayer : public LRNLayer<Dtype> {
  public:
   explicit CuDNNLCNLayer(const LayerParameter& param)
-      : LRNLayer<Dtype>(param), handles_setup_(false), tempDataSize(0),
-        tempData1(NULL), tempData2(NULL) {}
+      : LRNLayer<Dtype>(param), handles_setup_(false) {}
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
@@ -37,9 +36,6 @@ class CuDNNLCNLayer : public LRNLayer<Dtype> {
 
   int size_, pre_pad_;
   Dtype alpha_, beta_, k_;
-
-  size_t tempDataSize;
-  void *tempData1, *tempData2;
 };
 #endif
 
