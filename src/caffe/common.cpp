@@ -32,6 +32,40 @@ struct MemoryNode {
   MemoryNode* next;
 };
 
+static const size_t cpu_mem_align=512;
+static const size_t gpu_mem_align=512;
+
+static inline void* __malloc_aligned(size_t size) {
+  size+=sizeof(void*)+cpu_mem_align;
+  void* base_ptr;
+#ifdef CPU_ONLY
+  base_ptr=malloc(size);
+#else
+  cudaError_t err=cudaMallocHost(&base_ptr, size);
+  if(err!=cudaSuccess) {
+    base_ptr=nullptr;
+  }
+#endif
+  if(base_ptr==nullptr) {
+    return nullptr;
+  }
+  else {
+    size_t start=*reinterpret_cast<size_t*>(&base_ptr)+sizeof(void*);
+    start=((start+cpu_mem_align-1)/cpu_mem_align)*cpu_mem_align;
+    char* return_ptr=*reinterpret_cast<char**>(&start);
+    *reinterpret_cast<void**>(return_ptr-sizeof(void*))=base_ptr;
+    return static_cast<void*>(return_ptr);
+  }
+}
+
+static inline void __free_aligned(void* ptr) {
+#ifdef CPU_ONLY
+  free(*reinterpret_cast<void**>(static_cast<char*>(ptr)-sizeof(void*)));
+#else
+  cudaFreeHost(*reinterpret_cast<void**>(static_cast<char*>(ptr)-sizeof(void*)));
+#endif
+}
+
 Caffe& Caffe::Get() {
   if (!thread_instance_.get()) {
     thread_instance_.reset(new Caffe());
@@ -66,7 +100,7 @@ Caffe::Caffe()
 
 Caffe::~Caffe() {
   for(size_t i=0; i<cpu_memory_list_.size(); i++) {
-    free(cpu_memory_list_[i]->ptr);
+    __free_aligned(cpu_memory_list_[i]->ptr);
     vector<MemoryNode*> nodes;
     MemoryNode* node=cpu_memory_list_[i];
     while(node!=nullptr) {
@@ -81,7 +115,7 @@ Caffe::~Caffe() {
     }
   }
   if(cpu_workspace_size_>0) {
-    free(cpu_workspace_);
+    __free_aligned(cpu_workspace_);
   }
 }
 
@@ -181,7 +215,7 @@ Caffe::~Caffe() {
     }
   }
   for(size_t i=0; i<cpu_memory_list_.size(); i++) {
-    cudaFreeHost(cpu_memory_list_[i]->ptr);
+    __free_aligned(cpu_memory_list_[i]->ptr);
     vector<MemoryNode*> nodes;
     MemoryNode* node=cpu_memory_list_[i];
     while(node!=nullptr) {
@@ -199,7 +233,7 @@ Caffe::~Caffe() {
     cudaFree(gpu_workspace_);
   }
   if(cpu_workspace_size_>0) {
-    cudaFreeHost(Get().cpu_workspace_);
+    __free_aligned(Get().cpu_workspace_);
   }
 }
 
@@ -237,6 +271,7 @@ void* Caffe::GpuBuffer(size_t size) {
   if(size==0) {
     return nullptr;
   }
+  size=((size+gpu_mem_align-1)/gpu_mem_align)*gpu_mem_align;
   vector<MemoryNode*>& memory_list=Get().gpu_memory_list_;
   for(size_t i=0; i<memory_list.size(); i++) {
     void* ptr=nullptr;
@@ -528,6 +563,8 @@ void* Caffe::CpuBuffer(size_t size) {
   if(size==0) {
     return nullptr;
   }
+  size_t raw_size=size;
+  size=((size+cpu_mem_align-1)/cpu_mem_align)*cpu_mem_align;
   vector<MemoryNode*>& memory_list=Get().cpu_memory_list_;
   for(size_t i=0; i<memory_list.size(); i++) {
     void* ptr=nullptr;
@@ -564,14 +601,8 @@ void* Caffe::CpuBuffer(size_t size) {
       return ptr;
     }
   }
-#ifdef CPU_ONLY
-  void* new_ptr=malloc(size);
+  void* new_ptr=__malloc_aligned(size);
   if(new_ptr!=nullptr) {
-#else
-  void* new_ptr;
-  cudaError_t err=cudaMallocHost(&new_ptr, size);
-  if(err==cudaSuccess) {
-#endif
     caffe_memset(size, 0, new_ptr);
     MemoryNode* new_node=new MemoryNode;
     new_node->ptr=new_ptr;
@@ -636,11 +667,7 @@ void Caffe::ClearCpuBuffer(void) {
   vector<MemoryNode*>& memory_list=Get().cpu_memory_list_;
   for(size_t i=0; i<memory_list.size(); i++) {
     if(memory_list[i]->next==nullptr && !memory_list[i]->used) {
-#ifdef CPU_ONLY
-      free(memory_list[i]->ptr);
-#else
-      CUDA_CHECK(cudaFreeHost(memory_list[i]->ptr));
-#endif
+      __free_aligned(memory_list[i]->ptr);
       delete memory_list[i];
     }
     else {
@@ -655,16 +682,9 @@ void* Caffe::CpuWorkspace(size_t size) {
     return Get().cpu_workspace_;
   }
   else {
-#ifndef CPU_ONLY
-    void* new_ptr;
-    cudaError_t err=cudaMallocHost(&new_ptr, size);
-    if(err==cudaSuccess) {
-      CUDA_CHECK(cudaFreeHost(Get().cpu_workspace_));
-#else  // CPU_ONLY
-    void* new_ptr=malloc(size);
+    void* new_ptr=__malloc_aligned(size);
     if(new_ptr!=nullptr) {
-      free(Get().cpu_workspace_);
-#endif  // CPU_ONLY
+      __free_aligned(Get().cpu_workspace_);
       Get().cpu_workspace_size_=size;
       Get().cpu_workspace_=new_ptr;
       return new_ptr;
