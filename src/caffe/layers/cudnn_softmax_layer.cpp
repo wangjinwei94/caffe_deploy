@@ -11,6 +11,10 @@ template <typename Dtype>
 void CuDNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   SoftmaxLayer<Dtype>::LayerSetUp(bottom, top);
+  if(Caffe::mode()==Caffe::CPU) {
+    return;
+  }
+
   // Initialize CUDNN.
   cudnn::createTensor4dDesc<Dtype>(&bottom_desc_);
   cudnn::createTensor4dDesc<Dtype>(&top_desc_);
@@ -21,6 +25,10 @@ template <typename Dtype>
 void CuDNNSoftmaxLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   SoftmaxLayer<Dtype>::Reshape(bottom, top);
+  if(Caffe::mode()==Caffe::CPU) {
+    return;
+  }
+
   int N = this->outer_num_;
   int K = bottom[0]->shape(this->softmax_axis_);
   int H = this->inner_num_;

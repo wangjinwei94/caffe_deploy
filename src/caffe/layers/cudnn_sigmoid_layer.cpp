@@ -9,6 +9,10 @@ template <typename Dtype>
 void CuDNNSigmoidLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   SigmoidLayer<Dtype>::LayerSetUp(bottom, top);
+  if(Caffe::mode()==Caffe::CPU) {
+    return;
+  }
+
   // initialize cuDNN
   cudnn::createTensor4dDesc<Dtype>(&bottom_desc_);
   cudnn::createTensor4dDesc<Dtype>(&top_desc_);
@@ -21,6 +25,10 @@ template <typename Dtype>
 void CuDNNSigmoidLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   SigmoidLayer<Dtype>::Reshape(bottom, top);
+  if(Caffe::mode()==Caffe::CPU) {
+    return;
+  }
+
   const int N = bottom[0]->num();
   const int K = bottom[0]->channels();
   const int H = bottom[0]->height();
