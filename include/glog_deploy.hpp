@@ -9,9 +9,11 @@
 
 #include <iostream>
 #include <string>
+#include <cstdio>
 #include <cstdlib>
 #include <sstream>
 #include <ctime>
+#include <stdexcept>
 
 #if defined(__linux__)
 #include <unistd.h>
