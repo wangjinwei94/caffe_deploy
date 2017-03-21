@@ -32,8 +32,8 @@ class GradientChecker {
   // stored in the layer parameters and the blobs are unchanged.
   void CheckGradient(Layer<Dtype>* layer, const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top, int check_bottom = -1) {
-      layer->SetUp(bottom, top);
-      CheckGradientSingle(layer, bottom, top, check_bottom, -1, -1);
+    layer->SetUp(bottom, top);
+    CheckGradientSingle(layer, bottom, top, check_bottom, -1, -1);
   }
   void CheckGradientExhaustive(Layer<Dtype>* layer,
       const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top,
@@ -84,13 +84,22 @@ void GradientChecker<Dtype>::CheckGradientSingle(Layer<Dtype>* layer,
       CHECK_EQ(top_count, bottom[blob_id]->count());
     }
   }
+
+  for(auto& blob: bottom) {
+    caffe_set(blob->count(), static_cast<Dtype>(0), blob->mutable_cpu_diff());
+  }
+  for(auto& blob: top) {
+    caffe_set(blob->count(), static_cast<Dtype>(0), blob->mutable_cpu_diff());
+  }
+  for(auto& blob: layer->blobs()) {
+    caffe_set(blob->count(), static_cast<Dtype>(0), blob->mutable_cpu_diff());
+  }
   // First, figure out what blobs we need to check against, and zero init
   // parameter blobs.
   vector<Blob<Dtype>*> blobs_to_check;
   vector<bool> propagate_down(bottom.size(), check_bottom == -1);
   for (int i = 0; i < layer->blobs().size(); ++i) {
     Blob<Dtype>* blob = layer->blobs()[i].get();
-    caffe_set(blob->count(), static_cast<Dtype>(0), blob->mutable_cpu_diff());
     blobs_to_check.push_back(blob);
   }
   if (check_bottom == -1) {
