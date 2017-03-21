@@ -67,8 +67,8 @@ static std::string __StackTrace(void) {
 		int start=raw_name.find_last_of('(');
 		int end=raw_name.find_last_of('+');
 		if(start!=std::string::npos && end!=std::string::npos) {
-			s.append(raw_name.substr(0, start+1)).append("\n");
-			s.append(__Demangle(raw_name.substr(start+1, end-start-1))).append("\n");
+			s.append(raw_name.substr(0, start+1));
+			s.append(__Demangle(raw_name.substr(start+1, end-start-1)));
 			s.append(raw_name.substr(end, std::string::npos)).append("\n");
 		}
 		else {
