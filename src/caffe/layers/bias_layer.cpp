@@ -63,9 +63,7 @@ void BiasLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
     top[0]->ReshapeLike(*bottom[0]);
   }
   bias_multiplier_.Reshape(vector<int>(1, inner_dim_));
-  if (bias_multiplier_.cpu_data()[inner_dim_ - 1] != Dtype(1)) {
-    caffe_set(inner_dim_, Dtype(1), bias_multiplier_.mutable_cpu_data());
-  }
+  caffe_set(inner_dim_, Dtype(1), bias_multiplier_.mutable_cpu_data());
 }
 
 template <typename Dtype>
