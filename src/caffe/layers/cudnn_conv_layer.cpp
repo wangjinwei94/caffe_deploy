@@ -13,16 +13,19 @@ template <typename Dtype>
 void CuDNNConvolutionLayer<Dtype>::LayerSetUp(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   ConvolutionLayer<Dtype>::LayerSetUp(bottom, top);
+  if(Caffe::mode()==Caffe::CPU) {
+    return;
+  }
 
   // Initialize algorithm arrays
-  fwd_algo_       = new cudnnConvolutionFwdAlgo_t[bottom.size()];
-  bwd_filter_algo_= new cudnnConvolutionBwdFilterAlgo_t[bottom.size()];
-  bwd_data_algo_  = new cudnnConvolutionBwdDataAlgo_t[bottom.size()];
+  fwd_algo_.resize(bottom.size());
+  bwd_filter_algo_.resize(bottom.size());
+  bwd_data_algo_.resize(bottom.size());
 
   // initialize size arrays
-  workspace_fwd_sizes_ = new size_t[bottom.size()];
-  workspace_bwd_filter_sizes_ = new size_t[bottom.size()];
-  workspace_bwd_data_sizes_ = new size_t[bottom.size()];
+  workspace_fwd_sizes_.resize(bottom.size());
+  workspace_bwd_filter_sizes_.resize(bottom.size());
+  workspace_bwd_data_sizes_.resize(bottom.size());
 
   for (size_t i = 0; i < bottom.size(); ++i) {
     // initialize all to default algorithms
@@ -71,6 +74,10 @@ template <typename Dtype>
 void CuDNNConvolutionLayer<Dtype>::Reshape(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   ConvolutionLayer<Dtype>::Reshape(bottom, top);
+  if(Caffe::mode()==Caffe::CPU) {
+    return;
+  }
+
   CHECK_EQ(2, this->num_spatial_axes_)
       << "CuDNNConvolution input must have 2 spatial axes "
       << "(e.g., height and width). "
@@ -157,9 +164,9 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
 
 template <typename Dtype>
 CuDNNConvolutionLayer<Dtype>::~CuDNNConvolutionLayer() {
-  // Check that handles have been setup before destroying.
-  if (!handles_setup_) { return; }
-
+  if (!handles_setup_) {
+    return;
+  }
   for (int i = 0; i < bottom_descs_.size(); i++) {
     cudnnDestroyTensorDescriptor(bottom_descs_[i]);
     cudnnDestroyTensorDescriptor(top_descs_[i]);
@@ -169,13 +176,6 @@ CuDNNConvolutionLayer<Dtype>::~CuDNNConvolutionLayer() {
     cudnnDestroyTensorDescriptor(bias_desc_);
   }
   cudnnDestroyFilterDescriptor(filter_desc_);
-
-  delete [] fwd_algo_;
-  delete [] bwd_filter_algo_;
-  delete [] bwd_data_algo_;
-  delete [] workspace_fwd_sizes_;
-  delete [] workspace_bwd_data_sizes_;
-  delete [] workspace_bwd_filter_sizes_;
 }
 
 template <typename Dtype>
