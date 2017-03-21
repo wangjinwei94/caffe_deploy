@@ -16,9 +16,7 @@ void SliceLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   std::copy(slice_param.slice_point().begin(),
       slice_param.slice_point().end(),
       std::back_inserter(slice_point_));
-  if(top.size()==1) {
-    share_data_diff_=true;
-  }
+  share_data_diff_=top.size()==1;
 }
 
 template <typename Dtype>

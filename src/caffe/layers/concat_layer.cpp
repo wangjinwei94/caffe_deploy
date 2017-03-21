@@ -11,9 +11,7 @@ void ConcatLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   const ConcatParameter& concat_param = this->layer_param_.concat_param();
   CHECK(!(concat_param.has_axis() && concat_param.has_concat_dim()))
       << "Either axis or concat_dim should be specified; not both.";
-  if(bottom.size()==1) {
-    share_data_diff_=true;
-  }
+  share_data_diff_=bottom.size()==1;
 }
 
 template <typename Dtype>
