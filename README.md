@@ -32,11 +32,9 @@ Linux: mkdir target; cd target; cmake .. ; make install; make runtest;
 
 Windows: mkdir target; cd target; cmake .. ; Use Visual Studio to build install/runtest project.
 
-Cmake options: CPU_ONLY, USE_CUDNN, USE_EIGEN, DEBUG, BUILD_TEST
+Cmake options (default): CPU_ONLY (OFF), USE_CUDNN (ON), USE_EIGEN (ON), DEBUG (OFF), USE_AVX2 (ON), USE_FMA (ON), USE_NEON (ON)
 
 Test passed: all on Linux x86_64 with CUDA 8.0 and CuDNN 5.1, and CPU_ONLY + USE_EIGEN on Windows.
-
-If you have modified caffe.proto, please run update_proto.sh on Linux before build on any platform and configuration.
 
 # Caffe
 
