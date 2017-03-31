@@ -46,19 +46,28 @@ class CuDNNConvolutionLayer : public ConvolutionLayer<Dtype> {
   bool handles_setup_;
 
   // algorithms for forward and backwards convolutions
-  vector<cudnnConvolutionFwdAlgo_t> fwd_algo_;
-  vector<cudnnConvolutionBwdFilterAlgo_t> bwd_filter_algo_;
-  vector<cudnnConvolutionBwdDataAlgo_t> bwd_data_algo_;
+  cudnnConvolutionFwdAlgo_t fwd_algo_;
+  cudnnConvolutionBwdFilterAlgo_t bwd_filter_algo_;
+  cudnnConvolutionBwdDataAlgo_t bwd_data_algo_;
 
-  vector<cudnnTensorDescriptor_t> bottom_descs_, top_descs_;
+  cudnnTensorDescriptor_t bottom_desc_, top_desc_;
   cudnnTensorDescriptor_t    bias_desc_;
   cudnnFilterDescriptor_t      filter_desc_;
-  vector<cudnnConvolutionDescriptor_t> conv_descs_;
+  cudnnConvolutionDescriptor_t conv_desc_;
   int bottom_offset_, top_offset_, bias_offset_;
 
-  vector<size_t> workspace_fwd_sizes_;
-  vector<size_t> workspace_bwd_data_sizes_;
-  vector<size_t> workspace_bwd_filter_sizes_;
+  size_t workspace_fwd_size_;
+  size_t workspace_bwd_data_size_;
+  size_t workspace_bwd_filter_size_;
+
+  int kernel_h_;
+  int kernel_w_;
+  int stride_h_;
+  int stride_w_;
+  int pad_h_;
+  int pad_w_;
+
+  vector<int> input_shape_;
 };
 #endif
 
