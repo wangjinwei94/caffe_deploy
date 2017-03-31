@@ -75,7 +75,11 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
     void* temp_weight_data=Caffe::GpuBuffer(this->blobs_[0]->count()*sizeof(Dtype));
     void* temp_top_data=Caffe::GpuBuffer(top[0]->count()*sizeof(Dtype));
 
+#if CUDNN_VERSION_MIN(6, 0, 0)
     vector<cudnnConvolutionFwdAlgoPerf_t> fwd_perf(CUDNN_CONVOLUTION_FWD_ALGO_COUNT);
+#else
+    vector<cudnnConvolutionFwdAlgoPerf_t> fwd_perf(10);
+#endif
     int fwd_perf_cnt=0;
     CUDNN_CHECK(cudnnFindConvolutionForwardAlgorithmEx(Caffe::cudnn_handle(),
       bottom_desc_, temp_bottom_data, filter_desc_, temp_weight_data,
@@ -92,7 +96,11 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
       void* temp_weight_diff=Caffe::GpuBuffer(this->blobs_[0]->count()*sizeof(Dtype));
       void* temp_top_diff=Caffe::GpuBuffer(top[0]->count()*sizeof(Dtype));
 
+#if CUDNN_VERSION_MIN(6, 0, 0)
       vector<cudnnConvolutionBwdFilterAlgoPerf_t> bwd_filter_perf(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_COUNT);
+#else
+      vector<cudnnConvolutionBwdFilterAlgoPerf_t> bwd_filter_perf(10);
+#endif
       int bwd_filter_perf_cnt=0;
       CUDNN_CHECK(cudnnFindConvolutionBackwardFilterAlgorithmEx(Caffe::cudnn_handle(),
         bottom_desc_, temp_bottom_data, top_desc_, temp_top_diff, conv_desc_,
@@ -103,7 +111,11 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
       bwd_filter_algo_=bwd_filter_perf[0].algo;
       workspace_bwd_filter_size_=bwd_filter_perf[0].memory;
 
+#if CUDNN_VERSION_MIN(6, 0, 0)
       vector<cudnnConvolutionBwdDataAlgoPerf_t> bwd_data_perf(CUDNN_CONVOLUTION_BWD_DATA_ALGO_COUNT);
+#else
+      vector<cudnnConvolutionBwdDataAlgoPerf_t> bwd_data_perf(10);
+#endif
       int bwd_data_perf_cnt=0;
       CUDNN_CHECK(cudnnFindConvolutionBackwardDataAlgorithmEx(Caffe::cudnn_handle(),
         filter_desc_, temp_weight_data, top_desc_, temp_top_diff, conv_desc_,
