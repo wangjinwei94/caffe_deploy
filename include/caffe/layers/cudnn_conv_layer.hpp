@@ -66,6 +66,8 @@ class CuDNNConvolutionLayer : public ConvolutionLayer<Dtype> {
   int stride_w_;
   int pad_h_;
   int pad_w_;
+  int dilation_h_;
+  int dilation_w_;
 
   vector<int> input_shape_;
 };

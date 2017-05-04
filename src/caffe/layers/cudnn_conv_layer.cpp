@@ -27,6 +27,8 @@ void CuDNNConvolutionLayer<Dtype>::LayerSetUp(
   stride_w_ = this->stride_.cpu_data()[1];
   pad_h_ = this->pad_.cpu_data()[0];
   pad_w_ = this->pad_.cpu_data()[1];
+  dilation_h_ = this->dilation_.cpu_data()[1];
+  dilation_w_ = this->dilation_.cpu_data()[1];
   cudnn::createFilterDesc<Dtype>(&filter_desc_,
       this->num_output_ / this->group_, this->channels_ / this->group_,
       kernel_h_, kernel_w_);
@@ -66,7 +68,7 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
         this->num_output_ * this->out_spatial_dim_,
         this->out_spatial_dim_, width_out, 1);
     cudnn::setConvolutionDesc<Dtype>(&conv_desc_, bottom_desc_,
-        filter_desc_, pad_h_, pad_w_, stride_h_, stride_w_);
+        filter_desc_, pad_h_, pad_w_, stride_h_, stride_w_, dilation_h_, dilation_w_);
 
     // Specify workspace limit for kernels directly until we have a
     // planning strategy and a rewrite of Caffe's GPU memory mangagement

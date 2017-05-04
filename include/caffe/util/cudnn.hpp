@@ -126,12 +126,14 @@ inline cudnnDataType_t getConvolutionComputeDataType<double>(void) {
 template <typename Dtype>
 inline void setConvolutionDesc(cudnnConvolutionDescriptor_t* conv,
     cudnnTensorDescriptor_t bottom, cudnnFilterDescriptor_t filter,
-    int pad_h, int pad_w, int stride_h, int stride_w) {
+    int pad_h, int pad_w, int stride_h, int stride_w, int dilation_h, int dilation_w) {
 #if CUDNN_VERSION_MIN(6, 0, 0)
   CUDNN_CHECK(cudnnSetConvolution2dDescriptor(*conv,
-      pad_h, pad_w, stride_h, stride_w, 1, 1, CUDNN_CROSS_CORRELATION,
+      pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w, CUDNN_CROSS_CORRELATION,
       getConvolutionComputeDataType<Dtype>()));
 #else
+  CHECK_EQ(dilation_h, 1);
+  CHECK_EQ(dilation_w, 1);
   CUDNN_CHECK(cudnnSetConvolution2dDescriptor(*conv,
       pad_h, pad_w, stride_h, stride_w, 1, 1, CUDNN_CROSS_CORRELATION));
 #endif

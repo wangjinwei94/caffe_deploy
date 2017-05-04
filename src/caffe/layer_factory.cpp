@@ -50,20 +50,28 @@ shared_ptr<Layer<Dtype> > GetConvolutionLayer(
   if (engine == ConvolutionParameter_Engine_DEFAULT) {
     engine = ConvolutionParameter_Engine_CAFFE;
 #ifdef USE_CUDNN
+#if CUDNN_VERSION_MIN(6, 0, 0)
+    engine = ConvolutionParameter_Engine_CUDNN;
+#else
     if (!use_dilation) {
       engine = ConvolutionParameter_Engine_CUDNN;
     }
+#endif
 #endif
   }
   if (engine == ConvolutionParameter_Engine_CAFFE) {
     return shared_ptr<Layer<Dtype> >(new ConvolutionLayer<Dtype>(param));
 #ifdef USE_CUDNN
   } else if (engine == ConvolutionParameter_Engine_CUDNN) {
+#if CUDNN_VERSION_MIN(6, 0, 0)
+    return shared_ptr<Layer<Dtype> >(new CuDNNConvolutionLayer<Dtype>(param));
+#else
     if (use_dilation) {
       LOG(FATAL) << "CuDNN doesn't support the dilated convolution at Layer "
                  << param.name();
     }
     return shared_ptr<Layer<Dtype> >(new CuDNNConvolutionLayer<Dtype>(param));
+#endif
 #endif
   } else {
     LOG(FATAL) << "Layer " << param.name() << " has unknown engine.";
