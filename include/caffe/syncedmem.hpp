@@ -16,10 +16,10 @@ namespace caffe {
 class SyncedMemory {
  public:
   SyncedMemory()
-      : cpu_ptr_(nullptr), gpu_ptr_(nullptr), size_(0), head_(UNINITIALIZED),
+      : cpu_ptr_(nullptr), gpu_ptr_(nullptr), capacity_(0), size_(0), head_(UNINITIALIZED),
         own_cpu_data_(false), own_gpu_data_(false) {}
   explicit SyncedMemory(size_t size)
-      : cpu_ptr_(nullptr), gpu_ptr_(nullptr), size_(size), head_(UNINITIALIZED),
+      : cpu_ptr_(nullptr), gpu_ptr_(nullptr), capacity_(size), size_(size), head_(UNINITIALIZED),
         own_cpu_data_(false), own_gpu_data_(false) {}
   ~SyncedMemory();
   const void* cpu_data();
@@ -30,6 +30,7 @@ class SyncedMemory {
   void* mutable_gpu_data();
   enum SyncedHead { UNINITIALIZED, HEAD_AT_CPU, HEAD_AT_GPU, SYNCED };
   SyncedHead head() { return head_; }
+  size_t capacity() { return capacity_; }
   size_t size() { return size_; }
 
   void Clear();
@@ -44,6 +45,7 @@ class SyncedMemory {
   void to_gpu();
   void* cpu_ptr_;
   void* gpu_ptr_;
+  size_t capacity_;
   size_t size_;
   SyncedHead head_;
   bool own_cpu_data_;

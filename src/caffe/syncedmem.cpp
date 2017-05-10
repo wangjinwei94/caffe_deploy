@@ -28,16 +28,16 @@ SyncedMemory::~SyncedMemory() {
 inline void SyncedMemory::to_cpu() {
   switch (head_) {
   case UNINITIALIZED:
-    cpu_ptr_=Caffe::CpuBuffer(size_);
+    cpu_ptr_=Caffe::CpuBuffer(capacity_);
     // TODO: Jinwei: clear memory may cause bad performance
-    // caffe_memset(size_, 0, cpu_ptr_);
+    // caffe_memset(capacity_, 0, cpu_ptr_);
     head_ = HEAD_AT_CPU;
     own_cpu_data_ = true;
     break;
   case HEAD_AT_GPU:
 #ifndef CPU_ONLY
     if (cpu_ptr_ == NULL) {
-      cpu_ptr_=Caffe::CpuBuffer(size_);
+      cpu_ptr_=Caffe::CpuBuffer(capacity_);
       own_cpu_data_ = true;
     }
     caffe_gpu_memcpy(size_, gpu_ptr_, cpu_ptr_);
@@ -56,15 +56,15 @@ inline void SyncedMemory::to_gpu() {
 #ifndef CPU_ONLY
   switch (head_) {
   case UNINITIALIZED:
-    gpu_ptr_=Caffe::GpuBuffer(size_);
+    gpu_ptr_=Caffe::GpuBuffer(capacity_);
     // TODO: Jinwei: clear memory may cause bad performance
-    // caffe_gpu_memset(size_, 0, gpu_ptr_);
+    // caffe_gpu_memset(capacity_, 0, gpu_ptr_);
     head_ = HEAD_AT_GPU;
     own_gpu_data_ = true;
     break;
   case HEAD_AT_CPU:
     if (gpu_ptr_ == NULL) {
-      gpu_ptr_=Caffe::GpuBuffer(size_);
+      gpu_ptr_=Caffe::GpuBuffer(capacity_);
       own_gpu_data_ = true;
     }
     caffe_gpu_memcpy(size_, cpu_ptr_, gpu_ptr_);
@@ -80,7 +80,7 @@ inline void SyncedMemory::to_gpu() {
 }
 
 const void* SyncedMemory::cpu_data() {
-  if(size_==0) {
+  if(capacity_==0) {
     return nullptr;
   }
   else {
@@ -101,7 +101,7 @@ void SyncedMemory::set_cpu_data(void* data) {
 
 const void* SyncedMemory::gpu_data() {
 #ifndef CPU_ONLY
-  if(size_==0) {
+  if(capacity_==0) {
     return nullptr;
   }
   else {
@@ -129,7 +129,7 @@ void SyncedMemory::set_gpu_data(void* data) {
 }
 
 void* SyncedMemory::mutable_cpu_data() {
-  if(size_==0) {
+  if(capacity_==0) {
     return nullptr;
   }
   else {
@@ -141,7 +141,7 @@ void* SyncedMemory::mutable_cpu_data() {
 
 void* SyncedMemory::mutable_gpu_data() {
 #ifndef CPU_ONLY
-  if(size_==0) {
+  if(capacity_==0) {
     return nullptr;
   }
   else {
@@ -156,8 +156,9 @@ void* SyncedMemory::mutable_gpu_data() {
 }
 
 void SyncedMemory::Resize(size_t new_size) {
-  if(new_size>size_) {
-    size_=new_size;
+  size_=new_size;
+  if(size_>capacity_) {
+    capacity_=size_;
     Clear();
   }
 }
@@ -166,7 +167,9 @@ void SyncedMemory::Resize(size_t new_size) {
 void SyncedMemory::async_gpu_push(const cudaStream_t& stream) {
   CHECK(head_ == HEAD_AT_CPU);
   if (gpu_ptr_ == NULL) {
-    gpu_ptr_=Caffe::GpuBuffer(size_);
+    gpu_ptr_=Caffe::GpuBuffer(capacity_);
+    // TODO: Jinwei: clear memory may cause bad performance
+    // caffe_gpu_memset(capacity_, 0, gpu_ptr_);
     own_gpu_data_ = true;
   }
   const cudaMemcpyKind put = cudaMemcpyHostToDevice;
