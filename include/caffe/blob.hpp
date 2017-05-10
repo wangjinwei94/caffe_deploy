@@ -24,7 +24,7 @@ template <typename Dtype>
 class Blob {
  public:
   Blob()
-       : data_(), diff_(), count_(0), capacity_(0) {}
+       : data_(), diff_(), count_(0) {}
 
   /// @brief Deprecated; use <code>Blob(const vector<int>& shape)</code>.
   explicit Blob(const int num, const int channels, const int height,
@@ -275,7 +275,6 @@ class Blob {
   shared_ptr<SyncedMemory> shape_data_;
   vector<int> shape_;
   int count_;
-  int capacity_;
 
   DISABLE_COPY_AND_ASSIGN(Blob);
 };  // class Blob

@@ -37,20 +37,17 @@ void Blob<Dtype>::Reshape(const vector<int>& shape) {
     shape_[i] = shape[i];
     shape_data[i] = shape[i];
   }
-  if (count_ > capacity_) {
-    capacity_ = count_;
-    if(data_) {
-      data_->Resize(capacity_ * sizeof(Dtype));
-    }
-    else {
-      data_.reset(new SyncedMemory(capacity_ * sizeof(Dtype)));
-    }
-    if(diff_) {
-      diff_->Resize(capacity_ * sizeof(Dtype));
-    }
-    else {
-      diff_.reset(new SyncedMemory(capacity_ * sizeof(Dtype)));
-    }
+  if(data_) {
+    data_->Resize(count_ * sizeof(Dtype));
+  }
+  else {
+    data_.reset(new SyncedMemory(count_ * sizeof(Dtype)));
+  }
+  if(diff_) {
+    diff_->Resize(count_ * sizeof(Dtype));
+  }
+  else {
+    diff_.reset(new SyncedMemory(count_ * sizeof(Dtype)));
   }
 }
 
@@ -71,16 +68,12 @@ void Blob<Dtype>::ReshapeLike(const Blob<Dtype>& other) {
 
 template <typename Dtype>
 Blob<Dtype>::Blob(const int num, const int channels, const int height,
-    const int width)
-  // capacity_ must be initialized before calling Reshape
-  : capacity_(0) {
+    const int width) {
   Reshape(num, channels, height, width);
 }
 
 template <typename Dtype>
-Blob<Dtype>::Blob(const vector<int>& shape)
-  // capacity_ must be initialized before calling Reshape
-  : capacity_(0) {
+Blob<Dtype>::Blob(const vector<int>& shape) {
   Reshape(shape);
 }
 
@@ -165,23 +158,11 @@ void Blob<Dtype>::ShareDiff(const Blob& other) {
 template <typename Dtype>
 void Blob<Dtype>::SetDiffStorage(const shared_ptr<SyncedMemory>& storage){
   diff_ = storage;
-  if(!data_ || !diff_) {
-    capacity_=0;
-  }
-  else {
-    capacity_=std::min(data_->size(), diff_->size())/sizeof(Dtype);
-  }
 }
 
 template <typename Dtype>
 void Blob<Dtype>::SetDataStorage(const shared_ptr<SyncedMemory>& storage) {
   data_ = storage;
-  if(!data_ || !diff_) {
-    capacity_=0;
-  }
-  else {
-    capacity_=std::min(data_->size(), diff_->size())/sizeof(Dtype);
-  }
 }
 
 // The "update" method is used for parameter blobs in a Net, which are stored
