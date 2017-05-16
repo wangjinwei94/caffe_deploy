@@ -46,6 +46,7 @@ endif()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/submodules/protobuf)
 if(USE_EIGEN)
+  set(EIGEN_CORE_FUNCTION_ONLY ON)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/submodules/eigen)
 endif()
 
@@ -55,13 +56,23 @@ set(PROTO_FILE ${CMAKE_CURRENT_SOURCE_DIR}/src/caffe/proto/caffe.proto)
 set(PROTO_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/caffe/proto/caffe.pb.cc)
 set(PROTO_HEADER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/include/caffe/proto/)
 set(PROTO_HEADER_FILE caffe.pb.h)
-add_custom_command(
-  OUTPUT ${PROTO_SRC} ${PROTO_HEADER_PATH}/${PROTO_HEADER_FILE} DEPENDS protoc ${PROTO_FILE}
-  COMMAND protoc ${PROTO_FILE} --cpp_out=. --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/src
-  COMMAND mv caffe/proto/caffe.pb.cc ${PROTO_SRC}
-  COMMAND mkdir -p ${PROTO_HEADER_PATH}
-  COMMAND mv caffe/proto/caffe.pb.h ${PROTO_HEADER_PATH}/${PROTO_HEADER_FILE}
-)
+if(DEFINED CAFFE_PROTOC_PATH)
+  add_custom_command(
+    OUTPUT ${PROTO_SRC} ${PROTO_HEADER_PATH}/${PROTO_HEADER_FILE} DEPENDS protoc ${PROTO_FILE}
+    COMMAND ${CAFFE_PROTOC_PATH} ${PROTO_FILE} --cpp_out=. --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/src
+    COMMAND mv caffe/proto/caffe.pb.cc ${PROTO_SRC}
+    COMMAND mkdir -p ${PROTO_HEADER_PATH}
+    COMMAND mv caffe/proto/caffe.pb.h ${PROTO_HEADER_PATH}/${PROTO_HEADER_FILE}
+  )
+else()
+  add_custom_command(
+    OUTPUT ${PROTO_SRC} ${PROTO_HEADER_PATH}/${PROTO_HEADER_FILE} DEPENDS protoc ${PROTO_FILE}
+    COMMAND protoc ${PROTO_FILE} --cpp_out=. --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/src
+    COMMAND mv caffe/proto/caffe.pb.cc ${PROTO_SRC}
+    COMMAND mkdir -p ${PROTO_HEADER_PATH}
+    COMMAND mv caffe/proto/caffe.pb.h ${PROTO_HEADER_PATH}/${PROTO_HEADER_FILE}
+  )
+endif()
 
 ### CUDA
 
@@ -185,7 +196,8 @@ if(USE_EIGEN)
 endif()
 find_package(Threads REQUIRED)
 if(CMAKE_USE_PTHREADS_INIT)
-  target_link_libraries(caffe_deploy PUBLIC pthread)
+  target_compile_options(caffe_deploy PRIVATE -pthread)
+  target_link_libraries(caffe_deploy PUBLIC -pthread)
 endif()
 if(NOT CPU_ONLY)
   target_link_libraries(caffe_deploy PUBLIC cublas)

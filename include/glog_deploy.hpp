@@ -42,7 +42,7 @@ static std::string __TimeString(void) {
 	return std::string(buf);
 }
 
-#if defined(__linux__) && defined(__GNUC__)
+#if defined(__linux__) && defined(__GNUC__) && !defined(__ANDROID__)
 #include <execinfo.h>
 #include <cxxabi.h>
 static inline std::string __Demangle(const std::string& name) throw() {
@@ -113,8 +113,8 @@ public:
 		if(enable || level_=="FATAL") {
 			std::string info;
 			info.reserve(1024);
-			info.append(1, level_[0]).append(__TimeString()).append(" ").append(std::to_string(getpid()));
-			info.append(" ").append(file_).append(":").append(std::to_string(line_)).append("]\t");
+			info.append(1, level_[0]).append(__TimeString()).append(" ").append(ToString(getpid()));
+			info.append(" ").append(file_).append(":").append(ToString(line_)).append("]\t");
 			info.append(buffer_.str()).append("\n");
 			if(level_=="FATAL") {
 				info.append(__StackTrace());
@@ -133,6 +133,12 @@ public:
 	static bool enable;
 
 private:
+	static std::string ToString(int i) {
+		static char buf[100];
+		sprintf(buf, "%d", i);
+		return std::string(buf);
+	}
+
 	std::string level_;
 	std::string file_;
 	int line_;
