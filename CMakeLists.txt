@@ -56,23 +56,27 @@ set(PROTO_FILE ${CMAKE_CURRENT_SOURCE_DIR}/src/caffe/proto/caffe.proto)
 set(PROTO_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/caffe/proto/caffe.pb.cc)
 set(PROTO_HEADER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/include/caffe/proto/)
 set(PROTO_HEADER_FILE caffe.pb.h)
-if(DEFINED CAFFE_PROTOC_PATH)
+if(CMAKE_CROSSCOMPILING)
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/host_compile_protobuf)
+  execute_process(COMMAND bash -c "grep processor /proc/cpuinfo | wc -l" OUTPUT_VARIABLE CPU_NUM)
+  string(STRIP ${CPU_NUM} CPU_NUM)
   add_custom_command(
-    OUTPUT ${PROTO_SRC} ${PROTO_HEADER_PATH}/${PROTO_HEADER_FILE} DEPENDS protoc ${PROTO_FILE}
-    COMMAND ${CAFFE_PROTOC_PATH} ${PROTO_FILE} --cpp_out=. --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/src
-    COMMAND mv caffe/proto/caffe.pb.cc ${PROTO_SRC}
-    COMMAND mkdir -p ${PROTO_HEADER_PATH}
-    COMMAND mv caffe/proto/caffe.pb.h ${PROTO_HEADER_PATH}/${PROTO_HEADER_FILE}
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/host_compile_protobuf/protoc
+    COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/submodules/protobuf
+    COMMAND make -j${CPU_NUM} protoc
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/host_compile_protobuf
   )
+  set(CAFFE_PROTOC_PATH ${CMAKE_CURRENT_BINARY_DIR}/host_compile_protobuf/protoc)
 else()
-  add_custom_command(
-    OUTPUT ${PROTO_SRC} ${PROTO_HEADER_PATH}/${PROTO_HEADER_FILE} DEPENDS protoc ${PROTO_FILE}
-    COMMAND protoc ${PROTO_FILE} --cpp_out=. --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/src
-    COMMAND mv caffe/proto/caffe.pb.cc ${PROTO_SRC}
-    COMMAND mkdir -p ${PROTO_HEADER_PATH}
-    COMMAND mv caffe/proto/caffe.pb.h ${PROTO_HEADER_PATH}/${PROTO_HEADER_FILE}
-  )
+  set(CAFFE_PROTOC_PATH protoc)
 endif()
+add_custom_command(
+  OUTPUT ${PROTO_SRC} ${PROTO_HEADER_PATH}/${PROTO_HEADER_FILE} DEPENDS ${CAFFE_PROTOC_PATH} ${PROTO_FILE}
+  COMMAND ${CAFFE_PROTOC_PATH} ${PROTO_FILE} --cpp_out=. --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/src
+  COMMAND mv caffe/proto/caffe.pb.cc ${PROTO_SRC}
+  COMMAND mkdir -p ${PROTO_HEADER_PATH}
+  COMMAND mv caffe/proto/caffe.pb.h ${PROTO_HEADER_PATH}/${PROTO_HEADER_FILE}
+)
 
 ### CUDA
 
