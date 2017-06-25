@@ -69,6 +69,24 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
+#if defined(__x86_64__) || defined(_M_X64) || defined(__amd64)
+#define CAFFE_ARCH_x86_64 1
+#else
+#define CAFFE_ARCH_x86_64 0
+#endif
+
+#if defined(__i386__) || defined(_M_IX86) || defined(_X86_) || defined(__i386)
+#define CAFFE_ARCH_i386 1
+#else
+#define CAFFE_ARCH_i386 0
+#endif
+
+#if (__cplusplus > 201103L) || CAFFE_ARCH_x86_64 || CAFFE_ARCH_i386
+#define CAFFE_HAS_CXX11_MATH 1
+#else
+#define CAFFE_HAS_CXX11_MATH 0
+#endif
+
 class MemoryNode;
 
 // A singleton class to hold common caffe stuff, such as the handler that

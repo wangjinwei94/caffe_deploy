@@ -593,6 +593,8 @@ unsigned int caffe_rng_rand() {
   return (*caffe_rng())();
 }
 
+#if CAFFE_HAS_CXX11_MATH
+
 template <typename Dtype>
 Dtype caffe_nextafter(const Dtype b) {
   return std::nextafter(b, std::numeric_limits<Dtype>::max());
@@ -603,6 +605,20 @@ float caffe_nextafter(const float b);
 
 template
 double caffe_nextafter(const double b);
+
+#else
+
+template <>
+float caffe_nextafter<float>(const float b) {
+  return nextafterf(b, std::numeric_limits<float>::max());
+}
+
+template <>
+double caffe_nextafter<double>(const double b) {
+  return nextafter(b, std::numeric_limits<double>::max());
+}
+
+#endif
 
 template <typename Dtype>
 void caffe_rng_uniform(const int n, const Dtype a, const Dtype b, Dtype* r) {
